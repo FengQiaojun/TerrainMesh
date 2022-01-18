@@ -3,17 +3,18 @@ import torch.nn as nn
 from torch.utils import data
 import numpy as np
 import matplotlib.pyplot as plt
+from PIL import Image
 import time
 
 from dataset import SensatSemanticDataset
 from segmentation import network, utils
-
+from utils import denormalize,convert_class_to_rgb
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 train_dataset = SensatSemanticDataset(data_dir="/mnt/NVMe-2TB/qiaojun/SensatUrban",split="train_birmingham",normalize_images=True)
-train_loader = data.DataLoader(train_dataset, batch_size=8, shuffle=True, num_workers=0)
+train_loader = data.DataLoader(train_dataset, batch_size=1, shuffle=False, num_workers=1)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -50,15 +51,19 @@ best_score = 0.0
 cur_itrs = 0
 cur_epochs = 0
 print("[!] Retrain")
+
+checkpoint = torch.load("checkpoints/0615/naive_100.pth", map_location=torch.device('cpu'))
+model.load_state_dict(checkpoint["model_state"])
+
 model = nn.DataParallel(model)
 model.to(device)
 
 interval_loss = 0.
 epoch_loss = 0
-model.train()
+model.eval()
 
 while cur_epochs < total_epochs:
-    # =====  Train  =====
+    # =====  evaluation  =====
     cur_epochs += 1
     cur_itrs = 0
     for (images, labels) in train_loader:
@@ -68,44 +73,23 @@ while cur_epochs < total_epochs:
         images = images.to(device, dtype=torch.float32)
         labels = labels.to(device, dtype=torch.long)
 
-        optimizer.zero_grad()
         outputs = model(images)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        np_loss = loss.detach().cpu().numpy()
-        interval_loss += np_loss
-        epoch_loss += np_loss
-
-        if (cur_itrs) % 10 == 0:
-            interval_loss = interval_loss/10
-            print("Epoch %d, Itrs %d/%d, Loss=%f" %
-                      (cur_epochs, cur_itrs, len(train_loader), interval_loss))
-            interval_loss = 0.0
-
-        scheduler.step()  
-
-        '''
-        img_rgb = images.detach().cpu().numpy()[0,:,:,:].transpose((1,2,0))
+        
+        img_rgb = denormalize(images.detach().cpu(),mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225]).numpy()[0,:,:,:].transpose((1,2,0))
         img_label = labels.detach().cpu().numpy()[0,:,:]
         img_predict = outputs.detach().cpu().numpy()[0,:,:]
         img_predict = np.argmax(img_predict,axis=0)
         
-        if np_loss < 0.2:
-            plt.subplot(131)
-            plt.imshow(img_rgb)
-            plt.subplot(132)
-            plt.imshow(img_label)
-            plt.subplot(133)
-            plt.imshow(img_predict)
-            plt.show()
-        break
-        '''
-    
-    epoch_loss /= len(train_loader)
-    print("Epoch %d, Average Loss=%f" %
-                      (cur_epochs, epoch_loss))
-    if cur_epochs%10 == 0:
-        save_ckpt('checkpoints/0615/naive_%d.pth' %
-                              (cur_epochs))
+        
+        plt.subplot(131)
+        plt.imshow(img_rgb)
+        plt.subplot(132)
+        plt.imshow(img_label)
+        plt.subplot(133)
+        plt.imshow(img_predict)
+        plt.show()
+        
+        Image.fromarray((img_rgb * 255).astype(np.uint8)).save('img_rgb.png')
+        Image.fromarray(convert_class_to_rgb(img_label)).save('label_gt.png')
+        Image.fromarray(convert_class_to_rgb(img_predict)).save('label_predict.png')
+        
