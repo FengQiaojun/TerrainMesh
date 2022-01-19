@@ -97,18 +97,7 @@ if __name__ == "__main__":
                 ],
                 dtype=torch.float32,device=device
     )
-    '''
-    rgb = torch.tensor(
-                [
-                    [1.0, 1.0, 0.0],
-                    [1.0, 1.0, 0.0],
-                    [1.0, 1.0, 0.0],
-                    [1.0, 1.0, 0.0],
-                    [1.0, 1.0, 0.0],
-                ],
-                dtype=torch.float32,device=device
-    )
-    '''
+
     rgb = rgb[None]
     textures = TexturesVertex(verts_features=rgb.to(device))
 

@@ -98,12 +98,10 @@ https://conda.anaconda.org/conda-forge/linux-64/kiwisolver-1.3.1-py38h82cb98a_0.
 https://repo.anaconda.com/pkgs/main/linux-64/mkl-service-2.3.0-py38h27cfd23_1.conda
 https://repo.anaconda.com/pkgs/main/noarch/packaging-20.9-pyhd3eb1b0_0.conda
 https://repo.anaconda.com/pkgs/main/noarch/pexpect-4.8.0-pyhd3eb1b0_3.conda
-https://repo.anaconda.com/pkgs/main/linux-64/pillow-8.2.0-py38he98fc37_0.conda
 https://conda.anaconda.org/conda-forge/linux-64/portalocker-1.7.0-py38h578d9bd_1.tar.bz2
 https://repo.anaconda.com/pkgs/main/noarch/prompt-toolkit-3.0.17-pyh06a4308_0.conda
 https://repo.anaconda.com/pkgs/main/linux-64/pyqt-5.9.2-py38h05f1152_4.conda
 https://conda.anaconda.org/conda-forge/linux-64/pysocks-1.7.1-py38h578d9bd_3.tar.bz2
-https://repo.anaconda.com/pkgs/main/noarch/python-dateutil-2.8.1-pyhd3eb1b0_0.tar.bz2
 https://conda.anaconda.org/conda-forge/linux-64/pyyaml-5.3.1-py38h8df0ef7_1.tar.bz2
 https://repo.anaconda.com/pkgs/main/linux-64/terminado-0.9.4-py38h06a4308_0.conda
 https://repo.anaconda.com/pkgs/main/noarch/traitlets-5.0.5-pyhd3eb1b0_0.tar.bz2
@@ -146,7 +144,6 @@ https://repo.anaconda.com/pkgs/main/linux-64/matplotlib-base-3.3.4-py38h62a2d02_
 https://repo.anaconda.com/pkgs/main/linux-64/mkl_fft-1.3.0-py38h42c9631_2.conda
 https://repo.anaconda.com/pkgs/main/linux-64/mkl_random-1.2.1-py38ha9443f7_2.conda
 https://repo.anaconda.com/pkgs/main/linux-64/numpy-1.20.1-py38h93e21f0_0.conda
-https://conda.anaconda.org/open3d-admin/linux-64/open3d-0.11.2-py38_0.tar.bz2
 https://conda.anaconda.org/pytorch/linux-64/pytorch-1.7.1-py3.8_cuda10.2.89_cudnn7.6.5_0.tar.bz2
 https://repo.anaconda.com/pkgs/main/linux-64/scipy-1.6.2-py38had2a1c9_1.conda
 https://conda.anaconda.org/pytorch/linux-64/torchvision-0.8.2-py38_cu102.tar.bz2

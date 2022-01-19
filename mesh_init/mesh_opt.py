@@ -55,49 +55,6 @@ class MeshRendererWithFragmentsOnly(nn.Module):
         fragments = self.rasterizer(meshes_world, **kwargs)
         return fragments
 
-def pytorch3d_mesh_pcd_opt(vertices,faces,sparse_depth_img,depth_img,central_map,image_size=512,focal_length=-10,iters=100,return_mesh=False,GPU_id="0"):
-    device = torch.device("cuda:"+GPU_id)
-    torch.cuda.set_device(device)
-    expected_verts = torch.tensor(vertices,dtype=torch.float32,device=device)
-    expected_faces = torch.tensor(faces,dtype=torch.int64,device=device)
-    mesh = Meshes(verts=[expected_verts], faces=[expected_faces])
-    mesh.to(device=device)
-    deform_verts = torch.full(mesh.verts_packed().shape, 0.0, device=device, requires_grad=True)
-    deform_verts_mask = torch.full(deform_verts.shape, 0.0, device=device)
-    deform_verts_mask[:,2] = 1
-
-    cam_intrinsic = o3d.camera.PinholeCameraIntrinsic(width=512,height=512,fx=2560,fy=2560,cx=256,cy=256)
-    pcd = o3d.geometry.PointCloud.create_from_depth_image(depth=o3d.geometry.Image(sparse_depth_img.astype(np.float32)), intrinsic=cam_intrinsic)
-    target_pcd = np.array(pcd.points)
-    target_pcd = torch.tensor(target_pcd,dtype=torch.float32,device=device)
-    target_pcd = torch.unsqueeze(target_pcd,0)
-
-    optimizer = torch.optim.Adam([deform_verts], lr=0.5)
-    loop = tqdm(range(iters))
-    for i in loop:
-        # Initialize optimizer
-        optimizer.zero_grad()
-        # Deform the mesh
-        new_src_mesh = mesh.offset_verts(deform_verts*deform_verts_mask)
-        sample_trg = sample_points_from_meshes(new_src_mesh, 5000)
-        loss_chamfer, _ = chamfer_distance(sample_trg, target_pcd)
-        loss_laplacian = mesh_laplacian_smoothing(new_src_mesh, method="uniform")
-        loss = loss_chamfer + 0.5*loss_laplacian
-        loss.backward()
-        loop.set_description('chamfer_loss = %.6f, lap_loss = %.6f.' %(loss_chamfer,loss_laplacian))
-        optimizer.step() 
-     
-    return new_src_mesh
-    
-def pytorch3d_mesh_from_numpy(vertices,faces,GPU_id="0"):
-    device = torch.device("cuda:"+GPU_id)
-    torch.cuda.set_device(device)
-    expected_verts = torch.tensor(vertices,dtype=torch.float32,device=device)
-    expected_faces = torch.tensor(faces,dtype=torch.int64,device=device)
-    mesh = Meshes(verts=[expected_verts], faces=[expected_faces])
-    mesh.to(device=device)
-    return mesh
-    
 def pytorch3d_mesh_sparse_opt(vertices,faces,sparse_depth_img,depth_img,central_map,image_size=512,focal_length=-10,iters=100,return_mesh=False,GPU_id="0"):
     device = torch.device("cuda:"+GPU_id)
     torch.cuda.set_device(device)
@@ -229,7 +186,7 @@ def pytorch3d_mesh_sparse_opt_mesh_input(mesh,sparse_depth_img,depth_img,central
     else:
         return img_loss_depth,img_loss_depth_full
 
-def pytorch3d_mesh_dense_opt(vertices,faces,depth_img,central_map,image_size=512,focal_length=-10,iters=100,return_mesh=False,GPU_id="0"):
+def pytorch3d_mesh_dense_opt(vertices,faces,depth_img,image_size=512,focal_length=-10,iters=100,return_mesh=False,GPU_id="0"):
     device = torch.device("cuda:"+GPU_id)
     torch.cuda.set_device(device)
     expected_verts = torch.tensor(vertices,dtype=torch.float32,device=device)
@@ -257,7 +214,6 @@ def pytorch3d_mesh_dense_opt(vertices,faces,depth_img,central_map,image_size=512
             raster_settings=raster_settings
         ),
     )
-    central_map_gpu = torch.from_numpy(central_map).to(device=device)
     optimizer = torch.optim.Adam([deform_verts], lr=1.0)
     loop = tqdm(range(iters))
     for i in loop:
@@ -265,10 +221,9 @@ def pytorch3d_mesh_dense_opt(vertices,faces,depth_img,central_map,image_size=512
         optimizer.zero_grad()
         # Deform the mesh
         new_src_mesh = mesh.offset_verts(deform_verts*deform_verts_mask)
-        #rgb, depth = renderer(new_src_mesh)
         depth = renderer(new_src_mesh)
         depth_available_map = (depth_img_gpu>0)*(depth[0, ..., 0]>0)
-        loss_depth = torch.sum(torch.abs(depth_img_gpu-depth[0, ..., 0])*depth_available_map)/torch.sum(depth_available_map)
+        loss_depth = torch.sum(torch.abs(depth_img_gpu-depth[0, ..., 0])**2*depth_available_map)/torch.sum(depth_available_map)
         # Print the losses
         loss_laplacian = mesh_laplacian_smoothing(new_src_mesh, method="uniform")
         loss_edge = mesh_edge_loss(new_src_mesh)
@@ -280,9 +235,8 @@ def pytorch3d_mesh_dense_opt(vertices,faces,depth_img,central_map,image_size=512
         optimizer.step()
 
     depth_img_gpu = torch.from_numpy(depth_img).to(device=device)
-    loss_depth_full = torch.sum(torch.abs(depth_img_gpu-depth[0, ..., 0])*central_map_gpu)/torch.sum(central_map_gpu)
-    
-    img_loss_depth_full = (torch.abs(depth_img_gpu-depth[0, ..., 0])*central_map_gpu).detach().cpu().numpy()
+
+    img_loss_depth_full = (torch.abs(depth_img_gpu-depth[0, ..., 0])*depth_available_map).detach().cpu().numpy()
 
     if return_mesh:
         return img_loss_depth_full,new_src_mesh

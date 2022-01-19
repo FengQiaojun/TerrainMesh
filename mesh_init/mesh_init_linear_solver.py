@@ -2,26 +2,26 @@ import numpy as np
 import open3d as o3d
 from imageio import imread
 import os
-import matplotlib.pyplot as plt
-from scipy.linalg import lstsq
-import cvxpy as cp
 import time
 import torch
 import torch.nn as nn
-from pytorch3d.structures import (
-    Meshes,
-)
+from pytorch3d.structures import Meshes
 from pytorch3d.renderer import (
     SfMPerspectiveCameras,
     RasterizationSettings,
     MeshRasterizer,
-    SoftPhongShader,
-    MeshRasterizer,
-    PointLights,
 )
-from mesh_opt import MeshRendererWithFragmentsOnly
-
 from meshing import regular_512_576, regular_512_1024
+
+# Only keep parts of the outputs of MeshRenderer.
+class MeshRendererWithFragmentsOnly(nn.Module):
+    def __init__(self, rasterizer):
+        super().__init__()
+        self.rasterizer = rasterizer
+        
+    def forward(self, meshes_world, **kwargs) -> torch.Tensor:
+        fragments = self.rasterizer(meshes_world, **kwargs)
+        return fragments
 
 # The function to init a mesh with sparse depth.
 # Here we take inputs including
@@ -35,8 +35,8 @@ def init_mesh(sparse_depth_img, vertices, faces, laplacian, pix_to_face, bary_co
     sparse_depth_mask = sparse_depth_img>0
     num_sparse_depth = np.sum(sparse_depth_mask)
     num_vertices = vertices.shape[0]
-    A = torch.zeros(num_sparse_depth+num_vertices,num_vertices)
-    b = torch.zeros(num_sparse_depth+num_vertices)
+    A = np.zeros((num_sparse_depth+num_vertices,num_vertices))
+    b = np.zeros(num_sparse_depth+num_vertices)
     sparse_depth_idx = np.where(sparse_depth_mask==1)
     for i in range(num_sparse_depth):
         d_idx = [sparse_depth_idx[0][i],sparse_depth_idx[1][i]]
@@ -45,11 +45,35 @@ def init_mesh(sparse_depth_img, vertices, faces, laplacian, pix_to_face, bary_co
         bary_c = bary_coords[d_idx[0],d_idx[1],:]
         A[i,v_idx] = bary_c
         b[i] = sparse_depth_img[d_idx[0],d_idx[1]]
-    A[-num_vertices:,:] = laplacian*0.5
+    A[-num_vertices:,:] = laplacian/num_vertices*num_sparse_depth*0.5
     p, _ = torch.lstsq(torch.tensor(b).unsqueeze(1),torch.tensor(A))
     new_vertices = vertices * p.numpy()[:num_vertices,:]
     return new_vertices
 
+# This function generate the pix_to_face, bary_coords for a fixed mesh. For efficiency, we only run this once and keep this.
+# - pix_to_face: given the pixel coordinate, return the index of face
+# - bary_coords: given the pixel coordinate, return the barycentric coordinate (but need the face idx to check the vertex indices).
+def init_mesh_barycentric(vertices, faces, image_size, focal_length, device):
+    cameras = SfMPerspectiveCameras(device=device, focal_length=focal_length,)
+    raster_settings = RasterizationSettings(
+        image_size=image_size, 
+        blur_radius=0.0001,
+        faces_per_pixel=1, 
+    )
+    rasterizer=MeshRasterizer(
+        cameras=cameras, 
+        raster_settings=raster_settings
+    )
+    renderer = MeshRendererWithFragmentsOnly(rasterizer=rasterizer)
+    expected_verts = torch.tensor(vertices,dtype=torch.float32,device=device)
+    expected_faces = torch.tensor(faces,dtype=torch.int32,device=device)
+    mesh = Meshes(verts=[expected_verts], faces=[expected_faces])
+    mesh.to(device=device)
+    fragments = renderer(mesh)
+    depth = fragments.zbuf[0, ..., 0].detach().cpu().numpy()
+    pix_to_face = fragments.pix_to_face[0, ..., 0].detach().cpu().numpy()
+    bary_coords = fragments.bary_coords[0, ..., 0,:].detach().cpu().numpy()
+    return pix_to_face, bary_coords
 
 if __name__ == "__main__":
 
@@ -79,14 +103,12 @@ if __name__ == "__main__":
     print("num_sparse_depth",num_sparse_depth)
 
     # 2. Generate the mesh (vertices+faces) and initialize with the mean of the sparse depth.
-    t_start = time.time()
     #vertices,faces,Laplacian = regular_512_576()
     vertices,faces,Laplacian = regular_512_1024()
     vertices = (vertices-cam_c)/cam_f
     vertices = np.hstack((vertices,np.ones((vertices.shape[0],1))))
     #vertices *= mean_depth
-    print("Generate Mesh",time.time()-t_start)
-
+    
     # 3. Use PyTorch3D to optimize the mesh with sparse supervision
     # function to render a mesh
     if torch.cuda.is_available():
@@ -99,8 +121,7 @@ if __name__ == "__main__":
     expected_faces = torch.tensor(faces,dtype=torch.int32,device=device)
     mesh = Meshes(verts=[expected_verts], faces=[expected_faces])
     mesh.to(device=device)
-    print("Mesh to Pytorch3D",time.time()-t_start)
-
+    
     cameras = SfMPerspectiveCameras(device=device, focal_length=focal_length,)
     raster_settings = RasterizationSettings(
         image_size=image_size, 
@@ -111,19 +132,15 @@ if __name__ == "__main__":
         cameras=cameras, 
         raster_settings=raster_settings
     )
-    
     renderer = MeshRendererWithFragmentsOnly(rasterizer=rasterizer)
     fragments = renderer(mesh)
     depth = fragments.zbuf[0, ..., 0].detach().cpu().numpy()
     pix_to_face = fragments.pix_to_face[0, ..., 0].detach().cpu().numpy()
     bary_coords = fragments.bary_coords[0, ..., 0,:].detach().cpu().numpy()
-    print("Mesh Rendering",time.time()-t_start)
-
-    t_start = time.time()
+    
     A = np.zeros([num_sparse_depth+1024,1024])
     b = np.zeros(num_sparse_depth+1024)
     sparse_depth_idx = np.where(sparse_depth_mask==1)
-    print(sparse_depth_idx[0].shape)
     for i in range(num_sparse_depth):
         d_idx = [sparse_depth_idx[0][i],sparse_depth_idx[1][i]]
         face_idx = pix_to_face[d_idx[0],d_idx[1]]
@@ -133,36 +150,7 @@ if __name__ == "__main__":
         b[i] = sparse_depth_img[d_idx[0],d_idx[1]]
     A[-1024:,:] = Laplacian*0.5
 
-    '''
-    x = cp.Variable(1024)
-    cost = cp.sum_squares(A @ x - b)
-    prob = cp.Problem(cp.Minimize(cost))
-    prob.solve() 
-    # Print result.
-    #print("\nThe optimal value is", prob.value)
-    #print("The optimal x is")
-    #print(x.value)
-    p = x.value
-    print("The norm of the residual is ", cp.norm(A @ x - b, p=2).value)
-    '''
     p, _ = torch.lstsq(torch.tensor(b).unsqueeze(1),torch.tensor(A))
 
-    #new_vertices = vertices
-    #new_vertices[:,2] = p
-    #new_vertices[:,2] = p.numpy()[:1024,0]
     new_vertices = vertices * p.numpy()[:1024,:]
 
-    print(time.time()-t_start)
-
-    
-
-    o3d_mesh = o3d.geometry.TriangleMesh()
-    o3d_mesh.vertices = o3d.utility.Vector3dVector(new_vertices)
-    o3d_mesh.triangles = o3d.utility.Vector3iVector(faces)
-    #o3d_mesh.paint_uniform_color([0,0,1])
-
-    intrinsic = o3d.camera.PinholeCameraIntrinsic(width=512, height=512, fx=512, fy=512, cx=256, cy=256)
-    pcd_sparse = o3d.geometry.PointCloud.create_from_depth_image(o3d.geometry.Image(sparse_depth_img.astype(np.float32)),intrinsic=intrinsic,depth_scale=1,depth_trunc=500)
-    #pcd_sparse.paint_uniform_color([1,0,0])
-
-    o3d.visualization.draw_geometries([o3d_mesh,pcd_sparse],mesh_show_wireframe=True,mesh_show_back_face=True)
