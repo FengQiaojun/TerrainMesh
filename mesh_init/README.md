@@ -5,9 +5,7 @@ Generate a regular grid-like 2D mesh with equal sized triangles. Now we have 576
 **mesh_init_linear_solver.py**  
 Initialize a mesh with sparse depth measurments. Formulate as a linear solver.
 
-**mesh_render.py**  
-
-**(?)mesh_opt.py**  
+**mesh_opt.py**  
 Some functions used to optimize mesh using 2D depth map. 
 
 

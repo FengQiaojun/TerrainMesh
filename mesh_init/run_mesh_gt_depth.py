@@ -3,16 +3,19 @@ import os
 import numpy as np
 from imageio import imread, imwrite
 import time
+import matplotlib.pyplot as plt
 import torch
 from pytorch3d.io import save_obj
-from pytorch3d.structures import Meshes
+from pytorch3d.ops import sample_points_from_meshes
 from pytorch3d.renderer import (
     SfMPerspectiveCameras,
     RasterizationSettings,
     MeshRasterizer,
 )
-from meshing import regular_512_576, regular_512_1024, regular_512_90000
+from pytorch3d.structures import Meshes
+from meshing import regular_512_576, regular_512_1024, regular_512_29584, regular_512_90000
 from mesh_init_linear_solver import init_mesh, init_mesh_barycentric, MeshRendererWithFragmentsOnly
+from mesh_opt import pytorch3d_mesh_dense_opt
 
 dataset_dir = "/mnt/NVMe-2TB/qiaojun/SensatUrban/"
 dataset_name_list = ["birmingham_2", "birmingham_3", "birmingham_4", "birmingham_5", "birmingham_6", "cambridge_4",
@@ -31,12 +34,12 @@ if torch.cuda.is_available():
 else:
     device = torch.device("cpu")
 
-vertices_90000, faces_90000, laplacian_90000 = regular_512_90000()
-vertices_90000 = (vertices_90000-cam_c)/cam_f
-vertices_90000 = np.hstack(
-    (vertices_90000, np.ones((vertices_90000.shape[0], 1))))
-pix_to_face_90000, bary_coords_90000 = init_mesh_barycentric(
-    vertices_90000, faces_90000, image_size, focal_length, device)
+vertices_dense, faces_dense, laplacian_dense = regular_512_29584()
+vertices_dense = (vertices_dense-cam_c)/cam_f
+vertices_dense = np.hstack(
+    (vertices_dense, np.ones((vertices_dense.shape[0], 1))))
+pix_to_face_dense, bary_coords_dense = init_mesh_barycentric(
+    vertices_dense, faces_dense, image_size, focal_length, device)
 
 # A mesh renderer for depth
 cameras = SfMPerspectiveCameras(device=device, focal_length=focal_length,)
@@ -54,8 +57,6 @@ renderer = MeshRendererWithFragmentsOnly(rasterizer=rasterizer)
 for dataset_name in dataset_name_list:
     print(dataset_name)
     curr_dir = os.path.join(dataset_dir, dataset_name)
-    # For each dataset, we need to sample around 500/1000/2000/4000 depth points
-    # And for each mesh, we need to work on mesh_576 and mesh_1024
 
     if not os.path.isdir(os.path.join(curr_dir, "Meshes")):
         os.mkdir(os.path.join(curr_dir, "Meshes"))
@@ -65,32 +66,16 @@ for dataset_name in dataset_name_list:
             print(idx)
         depth_img_path_read = os.path.join(curr_dir, "Depths", "%04d.png" % idx)
         depth_img = imread(depth_img_path_read)/depth_scale
+        depth_img[np.where(depth_img>650)] = 0
+        depth_available_map = depth_img>0
+        num_depth = np.sum(depth_available_map)
+        mean_depth = np.sum(depth_img)/num_depth
 
-
-        '''
-            expected_verts_576 = torch.tensor(new_vertices_576,dtype=torch.float32,device=device)
-            expected_faces_576 = torch.tensor(faces_576,dtype=torch.int32,device=device)
-            mesh_576 = Meshes(verts=[expected_verts_576], faces=[expected_faces_576])
-            mesh_576.to(device=device)
-            fragments = renderer(mesh_576)
-            mesh_rendered_depth_576 = fragments.zbuf[0, ..., 0].detach().cpu().numpy()
-
-            new_vertices_1024 = init_mesh(
-                new_sparse_depth_img, vertices_1024, faces_1024, laplacian_1024, pix_to_face_1024, bary_coords_1024)
-            expected_verts_1024 = torch.tensor(new_vertices_1024,dtype=torch.float32,device=device)
-            expected_faces_1024 = torch.tensor(faces_1024,dtype=torch.int32,device=device)
-            mesh_1024 = Meshes(verts=[expected_verts_1024], faces=[expected_faces_1024])
-            mesh_1024.to(device=device)
-            fragments = renderer(mesh_1024)
-            mesh_rendered_depth_1024 = fragments.zbuf[0, ..., 0].detach().cpu().numpy()
-
-            # We need to store
-            # - the sampled points stored as depth image
-            # - the initialized mesh
-            # - the rendered depth of the initial mesh
-            imwrite(os.path.join(curr_dir, "Pcds_%d" % sample_num, "%04d.png"%idx),(new_sparse_depth_img*depth_scale).astype(np.uint16))
-            imwrite(os.path.join(curr_dir, "Pcds_%d" % sample_num, "%04d_mesh576.png"%idx),(mesh_rendered_depth_576*depth_scale).astype(np.uint16))
-            save_obj(os.path.join(curr_dir, "Pcds_%d" % sample_num, "%04d_mesh576.obj"%idx),expected_verts_576,expected_faces_576)
-            imwrite(os.path.join(curr_dir, "Pcds_%d" % sample_num, "%04d_mesh1024.png"%idx),(mesh_rendered_depth_1024*depth_scale).astype(np.uint16))
-            save_obj(os.path.join(curr_dir, "Pcds_%d" % sample_num, "%04d_mesh1024.obj"%idx),expected_verts_1024,expected_faces_1024)
-        '''
+        img_loss_depth_full,new_mesh = pytorch3d_mesh_dense_opt(vertices_dense*mean_depth, faces_dense, depth_img, image_size, focal_length, iters=100, return_mesh=True, GPU_id="0", w_laplacian=20, w_edge=0)
+        
+        final_verts, final_faces = new_mesh.get_mesh_verts_faces(0)
+        final_obj = os.path.join(curr_dir, "Meshes", "%04d.obj" % idx)
+        save_obj(final_obj, final_verts, final_faces)
+        points_gt = sample_points_from_meshes(new_mesh, num_samples=10000, return_normals=False)[0].detach().cpu()
+        torch.save(points_gt, os.path.join(curr_dir, "Meshes", "%04d_pcd.pt" % idx))
+        
