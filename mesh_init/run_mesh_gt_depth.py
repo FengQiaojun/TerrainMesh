@@ -62,6 +62,8 @@ for dataset_name in dataset_name_list:
         os.mkdir(os.path.join(curr_dir, "Meshes"))
 
     for idx in range(num_imgs):
+        if os.path.exists(os.path.join(curr_dir, "Meshes", "%04d.obj" % idx)):
+            continue
         if (idx%10==0):
             print(idx)
         depth_img_path_read = os.path.join(curr_dir, "Depths", "%04d.png" % idx)
@@ -72,8 +74,12 @@ for dataset_name in dataset_name_list:
         mean_depth = np.sum(depth_img)/num_depth
 
         img_loss_depth_full,new_mesh = pytorch3d_mesh_dense_opt(vertices_dense*mean_depth, faces_dense, depth_img, image_size, focal_length, iters=100, return_mesh=True, GPU_id="0", w_laplacian=20, w_edge=0)
-        
         final_verts, final_faces = new_mesh.get_mesh_verts_faces(0)
+        # (?) Sometimes invalid result happens
+        while not torch.isfinite(final_verts).all():
+            img_loss_depth_full,new_mesh = pytorch3d_mesh_dense_opt(vertices_dense*mean_depth, faces_dense, depth_img, image_size, focal_length, iters=100, return_mesh=True, GPU_id="0", w_laplacian=20, w_edge=0)
+            final_verts, final_faces = new_mesh.get_mesh_verts_faces(0)
+        
         final_obj = os.path.join(curr_dir, "Meshes", "%04d.obj" % idx)
         save_obj(final_obj, final_verts, final_faces)
         points_gt = sample_points_from_meshes(new_mesh, num_samples=10000, return_normals=False)[0].detach().cpu()
