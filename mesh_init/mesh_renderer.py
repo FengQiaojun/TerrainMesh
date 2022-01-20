@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from pytorch3d.renderer import (
+    SfMPerspectiveCameras,
     PerspectiveCameras,
     MeshRenderer,
     MeshRasterizer,
@@ -61,6 +62,40 @@ def render_mesh_vertex_texture(verts,faces,feats,image_size=512,device=None):
 
     return images, depth
 
+class MeshRendererWithDepth(nn.Module):
+    def __init__(self, rasterizer):
+        super().__init__()
+        self.rasterizer = rasterizer
+        
+    def forward(self, meshes_world, **kwargs) -> torch.Tensor:
+        fragments = self.rasterizer(meshes_world, **kwargs)
+        return fragments.zbuf
+
+def mesh_render_depth(mesh,image_size=512,focal_length=-10,GPU_id="0"):
+    device = torch.device("cuda:"+GPU_id)
+    # Define the camera
+    R = torch.eye(3,device=device).reshape((1,3,3))
+    T = torch.zeros(1,3,device=device)
+    cameras = SfMPerspectiveCameras(device=device, R=R, T=T, focal_length=focal_length)
+    # Define the Rasterization
+    raster_settings = RasterizationSettings(
+        image_size=image_size, 
+        blur_radius=0.0001, 
+        faces_per_pixel=1, 
+    )
+    # Define the renderer
+    renderer = MeshRendererWithDepth(
+        rasterizer=MeshRasterizer(
+            cameras=cameras, 
+            raster_settings=raster_settings
+        ),
+    )
+    depth = renderer(mesh)
+    depth = depth[0, ..., 0].detach().cpu().numpy()
+    # fill the empty region with mean
+    depth_mean = np.mean(depth[np.where(depth>0)])
+    depth[np.where(depth<=0)] = depth_mean
+    return depth
 
 if __name__ == "__main__":
 

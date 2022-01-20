@@ -38,21 +38,6 @@ vertices_dense, faces_dense, laplacian_dense = regular_512_29584()
 vertices_dense = (vertices_dense-cam_c)/cam_f
 vertices_dense = np.hstack(
     (vertices_dense, np.ones((vertices_dense.shape[0], 1))))
-pix_to_face_dense, bary_coords_dense = init_mesh_barycentric(
-    vertices_dense, faces_dense, image_size, focal_length, device)
-
-# A mesh renderer for depth
-cameras = SfMPerspectiveCameras(device=device, focal_length=focal_length,)
-raster_settings = RasterizationSettings(
-    image_size=image_size,
-    blur_radius=0.0001,
-    faces_per_pixel=1,
-)
-rasterizer = MeshRasterizer(
-    cameras=cameras,
-    raster_settings=raster_settings
-)
-renderer = MeshRendererWithFragmentsOnly(rasterizer=rasterizer)
 
 for dataset_name in dataset_name_list:
     print(dataset_name)

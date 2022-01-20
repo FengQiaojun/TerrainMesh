@@ -36,7 +36,7 @@ class MeshRendererWithDepth(nn.Module):
         fragments = self.rasterizer(meshes_world, **kwargs)
         return fragments.zbuf
 
-def pytorch3d_mesh_dense_opt(vertices, faces, depth_img, image_size=512, focal_length=-10, iters=100, return_mesh=False, GPU_id="0", w_laplacian=20, w_edge=0):
+def pytorch3d_mesh_dense_opt(vertices, faces, depth_img, image_size=512, focal_length=-10, iters=100, return_mesh=False, GPU_id="0", w_laplacian=20, w_edge=0, lr=1.0):
     device = torch.device("cuda:"+GPU_id)
     torch.cuda.set_device(device)
     expected_verts = torch.tensor(vertices, dtype=torch.float32, device=device)
@@ -66,7 +66,7 @@ def pytorch3d_mesh_dense_opt(vertices, faces, depth_img, image_size=512, focal_l
             raster_settings=raster_settings
         ),
     )
-    optimizer = torch.optim.Adam([deform_verts], lr=1.0)
+    optimizer = torch.optim.Adam([deform_verts], lr=lr)
     loop = tqdm(range(iters))
     for i in loop:
         # Initialize optimizer

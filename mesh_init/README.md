@@ -19,4 +19,7 @@ Calculate Euclidean Distance Transform for the sparse depth map.
 Use this to generate some initial meshes. Also re-sample the sparse depth to get a fixed-number of points there.
 
 **run_mesh_gt_depth.py**  
-Initialize a super dense mesh as the groundtruth. We actually sample points to generate pointcloud as the groundtruth.
+Initialize a super dense mesh as the groundtruth. We actually sample points to generate pointcloud as the groundtruth.  
+
+**run_mesh_gt_depth_refine.py**  
+Some have very large depth error so we try to refine it.
