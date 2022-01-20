@@ -1,1 +1,2 @@
 from .sensat_dataset import SensatSemanticDataset
+from .terrain_dataset import TerrainDataset

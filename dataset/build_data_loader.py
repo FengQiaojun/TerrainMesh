@@ -4,13 +4,15 @@ import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, Subset
 from torch.utils.data.distributed import DistributedSampler
 
-from terrain_dataset import TerrainDataset
-from sensat_dataset import SensatSemanticDataset
+from .terrain_dataset import TerrainDataset
+from .sensat_dataset import SensatSemanticDataset
 
 logger = logging.getLogger(__name__)
 
+
 def _identity(x):
     return x
+
 
 def build_data_loader(
     cfg, dataset, split_name, num_workers=8, multigpu=False, shuffle=True, num_samples=None
@@ -21,7 +23,7 @@ def build_data_loader(
         batch_size = cfg.SOLVER.BATCH_SIZE_EVAL
     elif split_name == "test":
         batch_size = cfg.SOLVER.BATCH_SIZE_EVAL
-    
+
     num_gpus = 1
     batch_size //= num_gpus
 
@@ -40,16 +42,17 @@ def build_data_loader(
         dset = SensatSemanticDataset(
             data_dir=cfg.DATASETS.DATA_DIR,
             split=split_name,
-            samples=cfg.DATASETS.SAMPLES,
-            normalize_images=cfg.DATASETS.NORMALIZE_IMAGES,
             meshing=cfg.DATASETS.MESHING,
-            noise=cfg.DATASETS.NOISE
+            samples=cfg.DATASETS.SAMPLES,
+            depth_scale=cfg.DATASETS.DEPTH_SCALE,
+            normalize_images=cfg.DATASETS.NORMALIZE_IMAGES,
         )
-        collate_fn = SensatSemanticDataset.collate_fn        
+        collate_fn = SensatSemanticDataset.collate_fn
     else:
         raise ValueError("Dataset %s not registered" % dataset)
 
-    loader_kwargs = {"batch_size": batch_size, "collate_fn": collate_fn, "num_workers": num_workers}
+    loader_kwargs = {"batch_size": batch_size,
+                     "collate_fn": collate_fn, "num_workers": num_workers}
 
     if hasattr(dset, "postprocess"):
         postprocess_fn = dset.postprocess
