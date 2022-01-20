@@ -1,4 +1,5 @@
 ### Functions
+
 **meshing.py**  
 Generate a regular grid-like 2D mesh with equal sized triangles. Now we have 576 vertices and 1024 vertices versions.  
 
@@ -10,6 +11,10 @@ Some functions used to optimize mesh using 2D depth map.
 
 
 ### Scripts
+
+**run_calc_edt.py**
+Calculate Euclidean Distance Transform for the sparse depth map.  
+
 **run_mesh_init_sparse_depth.py**  
 Use this to generate some initial meshes. Also re-sample the sparse depth to get a fixed-number of points there.
 

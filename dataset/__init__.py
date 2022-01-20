@@ -1,1 +1,1 @@
-from .dataset_sensat import SensatSemanticDataset
+from .sensat_dataset import SensatSemanticDataset
