@@ -15,12 +15,15 @@ from pytorch3d.renderer import (
 from pytorch3d.structures import Meshes
 from meshing import regular_512_576, regular_512_1024, regular_512_29584, regular_512_90000
 from mesh_init_linear_solver import init_mesh, init_mesh_barycentric, MeshRendererWithFragmentsOnly
-from mesh_opt import pytorch3d_mesh_dense_opt
+from mesh_opt import pytorch3d_mesh_dense_opt, pytorch3d_mesh_dense_chamfer_opt
 from mesh_renderer import mesh_render_depth
 
 dataset_dir = "/mnt/NVMe-2TB/qiaojun/SensatUrban/"
-dataset_name_list = ["birmingham_2", "birmingham_3", "birmingham_4", "birmingham_5", "birmingham_6", "cambridge_4",
-                     "cambridge_5", "cambridge_6", "cambridge_10", "cambridge_11", "cambridge_12", "cambridge_14", "cambridge_15"]
+#dataset_name_list = ["birmingham_2", "birmingham_3", "birmingham_4", "birmingham_5", "birmingham_6", "cambridge_4",
+#                     "cambridge_5", "cambridge_6", "cambridge_10", "cambridge_11", "cambridge_12", "cambridge_14", "cambridge_15"]
+#dataset_name_list = ["cambridge_6", "cambridge_14", "cambridge_15"] # depth_error_threshold = 2.0
+#dataset_name_list = ["cambridge_4", "cambridge_5", "cambridge_10", "cambridge_11", "cambridge_12", ]
+dataset_name_list = ["cambridge_4", ]
 
 image_size = 512
 cam_c = 256
@@ -48,7 +51,10 @@ for dataset_name in dataset_name_list:
     if not os.path.isdir(os.path.join(curr_dir, "Meshes")):
         os.mkdir(os.path.join(curr_dir, "Meshes"))
 
-    for idx in range(num_imgs):
+    #for idx in range(num_imgs):
+        
+    for idx in range(607,num_imgs):
+        print(idx)
         curr_obj = os.path.join(curr_dir, "Meshes", "%04d.obj" % idx)
         mesh = load_objs_as_meshes([curr_obj], device=torch.device("cuda:0"))
         depth_rendered = mesh_render_depth(mesh,image_size=image_size,focal_length=focal_length,GPU_id="0")        
@@ -62,25 +68,49 @@ for dataset_name in dataset_name_list:
         
         depth_error = np.sum(np.abs(depth_img-depth_rendered)*depth_available_map) / num_depth
         if depth_error < depth_error_threshold:
-            print(idx)
             continue
         else:
             print(idx,depth_error)
             learning_rate = 1.0
-            while(depth_error > depth_error_threshold):
-                learning_rate *= 0.8
-                img_loss_depth_full,new_mesh = pytorch3d_mesh_dense_opt(vertices_dense*mean_depth, faces_dense, depth_img, image_size, focal_length, iters=200, return_mesh=True, GPU_id="0", w_laplacian=10, w_edge=0, lr=learning_rate)
+            final_verts = vertices_dense*mean_depth
+            while(depth_error > depth_error_threshold or np.isnan(depth_error)):
+                learning_rate *= 0.95
+                img_loss_depth_full,new_mesh = pytorch3d_mesh_dense_opt(final_verts, faces_dense, depth_img, image_size, focal_length, iters=100, return_mesh=True, GPU_id="0", w_laplacian=10, w_edge=5, lr=learning_rate)
                 final_verts, final_faces = new_mesh.get_mesh_verts_faces(0)
                 # (?) Sometimes invalid result happens
                 while not torch.isfinite(final_verts).all():
-                    img_loss_depth_full,new_mesh = pytorch3d_mesh_dense_opt(vertices_dense*mean_depth, faces_dense, depth_img, image_size, focal_length, iters=200, return_mesh=True, GPU_id="0", w_laplacian=10, w_edge=0, lr=learning_rate)
+                    learning_rate = 1.0
+                    img_loss_depth_full,new_mesh = pytorch3d_mesh_dense_opt(vertices_dense*mean_depth, faces_dense, depth_img, image_size, focal_length, iters=100, return_mesh=True, GPU_id="0", w_laplacian=10, w_edge=0, lr=learning_rate)
                     final_verts, final_faces = new_mesh.get_mesh_verts_faces(0)
                 depth_rendered = mesh_render_depth(new_mesh,image_size=image_size,focal_length=focal_length,GPU_id="0")        
                 depth_error = np.sum(np.abs(depth_img-depth_rendered)*depth_available_map) / num_depth
+                print("current_error",depth_error)     
+                plt.subplot(131)
+                plt.imshow(depth_img)
+                plt.subplot(132)
+                plt.imshow(depth_rendered)
+                plt.subplot(133)
+                plt.imshow(np.abs(depth_img-depth_rendered)*depth_available_map)
+                plt.show()
+                final_obj = os.path.join(curr_dir, "Meshes", "%04d_1.obj" % idx)
+                save_obj(final_obj, final_verts, final_faces)
+
+                img_loss_depth_full,new_mesh = pytorch3d_mesh_dense_chamfer_opt(final_verts, faces_dense, depth_img, image_size,cam_c, cam_f, iters=30, return_mesh=True, GPU_id="0", w_laplacian=20, num_samples=20000, lr=0.1)
+                final_verts, final_faces = new_mesh.get_mesh_verts_faces(0)
+                depth_rendered = mesh_render_depth(new_mesh,image_size=image_size,focal_length=focal_length,GPU_id="0")        
+                depth_error = np.sum(np.abs(depth_img-depth_rendered)*depth_available_map) / num_depth
                 print("current_error",depth_error)
-        
+                plt.subplot(131)
+                plt.imshow(depth_img)
+                plt.subplot(132)
+                plt.imshow(depth_rendered)
+                plt.subplot(133)
+                plt.imshow(np.abs(depth_img-depth_rendered)*depth_available_map)
+                plt.show()
+                final_obj = os.path.join(curr_dir, "Meshes", "%04d_2.obj" % idx)
+                save_obj(final_obj, final_verts, final_faces)
+
             final_obj = os.path.join(curr_dir, "Meshes", "%04d.obj" % idx)
             save_obj(final_obj, final_verts, final_faces)
             points_gt = sample_points_from_meshes(new_mesh, num_samples=10000, return_normals=False)[0].detach().cpu()
             torch.save(points_gt, os.path.join(curr_dir, "Meshes", "%04d_pcd.pt" % idx))
-        

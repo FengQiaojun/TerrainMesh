@@ -1,8 +1,18 @@
 # render the mesh using a customized naive shader that preserve the vertex color without any other effects.
+import os 
+import open3d as o3d
 import numpy as np
 import matplotlib.pyplot as plt
+from imageio import imread
+import time
 import torch
 import torch.nn as nn
+from pytorch3d.loss import (
+    point_mesh_face_distance,
+    point_mesh_edge_distance,
+    chamfer_distance,
+)
+from pytorch3d.ops import sample_points_from_meshes
 from pytorch3d.renderer import (
     SfMPerspectiveCameras,
     PerspectiveCameras,
@@ -11,8 +21,10 @@ from pytorch3d.renderer import (
     RasterizationSettings,
     TexturesVertex,
 )
-from pytorch3d.structures import Meshes
+
+from pytorch3d.structures import Meshes, Pointclouds
 from pytorch3d.renderer.mesh.renderer import MeshRendererWithFragments
+
 
 class TextureShader(nn.Module):
     """
@@ -97,76 +109,32 @@ def mesh_render_depth(mesh,image_size=512,focal_length=-10,GPU_id="0"):
     depth[np.where(depth<=0)] = depth_mean
     return depth
 
+def pcd_from_depth(depth_img, cam_c, cam_f, to_pytorch3d=False):
+    intrinsic = o3d.camera.PinholeCameraIntrinsic(width=depth_img.shape[1], height=depth_img.shape[0], fx=cam_f, fy=cam_f, cx=cam_c, cy=cam_c)
+    depth_image = depth_img.astype(np.float32)
+    pcd = o3d.geometry.PointCloud.create_from_depth_image(o3d.geometry.Image(depth_img),intrinsic,depth_scale=1)
+    if to_pytorch3d:
+        pcd = Pointclouds(points = [torch.tensor(np.array(pcd.points), dtype=torch.float32)])
+    return pcd
+
+dataset_dir = "/mnt/NVMe-2TB/qiaojun/SensatUrban/"
+dataset_name = "cambridge_4"
+data_idx = "0608"
+cam_c = 256
+cam_f = 512
+
 if __name__ == "__main__":
+    mesh = o3d.io.read_triangle_mesh(os.path.join(dataset_dir,dataset_name,"Meshes",data_idx+".obj"))
+    depth_img = imread(os.path.join(dataset_dir,dataset_name,"Depths",data_idx+".png"))/100
+    depth_img = depth_img.astype(np.float32)
+    pcd = pcd_from_depth(depth_img, cam_c, cam_f)
+    o3d.visualization.draw_geometries([pcd,mesh],mesh_show_back_face=True)
 
-    if torch.cuda.is_available():
-        device = torch.device("cuda:0")
-        torch.cuda.set_device(device)
-    else:
-        device = torch.device("cpu")
-
-    verts = torch.tensor(
-                [
-                    [ 0.5, -0.5,  0.0],
-                    [ 0.5,  0.5,  0.0],
-                    [-0.5, -0.5,  0.0],
-                    [-0.5,  0.5,  0.0],
-                    [ 0.0,  0.0, -0.2],
-                ],
-                dtype=torch.float32,device=device
-    )
-    faces = torch.tensor(
-                [
-                    [0, 4, 1],
-                    [1, 4, 3],
-                    [3, 4, 2],
-                    [2, 4, 0],
-                ],
-                dtype=torch.int64,device=device
-    )
-    rgb = torch.tensor(
-                [
-                    [0.0, 1.0, 0.0, 0.5],
-                    [1.0, 1.0, 0.0, 0.5],
-                    [0.0, 0.0, 1.0, 0.5],
-                    [1.0, 1.0, 0.0, 0.5],
-                    [1.0, 1.0, 0.0, 0.5],
-                ],
-                dtype=torch.float32,device=device
-    )
-
-    rgb = rgb[None]
-    textures = TexturesVertex(verts_features=rgb.to(device))
-
-    mesh = Meshes(verts=[verts.to(device)], faces=[faces.to(device)], textures=textures)
-
-    R = torch.eye(3,device=device).reshape((1,3,3))
-    T = torch.zeros(1,3,device=device)
-    T[0,2] = 0.7
-    cameras = PerspectiveCameras(device=device, R=R, T=T, focal_length=-1,)
-    raster_settings = RasterizationSettings(
-        image_size=256, 
-        blur_radius=0.00001,
-        faces_per_pixel=1, 
-    )
-    rasterizer=MeshRasterizer(
-        cameras=cameras, 
-        raster_settings=raster_settings
-    )
-    shader = TextureShader(device=device)
-    
-    renderer = MeshRendererWithFragments(
-        rasterizer=rasterizer, shader=shader
-    )
-    images, depth = renderer(mesh)
-
-    depth = depth.zbuf
-    print(images.shape)
-    images_display = images[0, ..., :3].cpu().numpy()
-    depth_display = depth[0, ..., 0].cpu().numpy()
-
-    plt.imshow(images_display)
-    plt.grid("off")
-    plt.axis("off")
-    plt.show()
-    
+    pcd_pytorch = pcd_from_depth(depth_img,cam_c,cam_f,to_pytorch3d=True)
+    pcd_pytorch.to(device=torch.device("cuda:1"))
+    mesh_pytorch = Meshes(verts=[torch.tensor(mesh.vertices, dtype=torch.float32)], faces=[torch.tensor(mesh.triangles, dtype=torch.int64)])
+    mesh_pytorch.to(device=torch.device("cuda:1"))
+    mesh_pcd_pytorch = sample_points_from_meshes(mesh_pytorch, num_samples=10000, return_normals=False)
+    cham_loss, _ = chamfer_distance(mesh_pcd_pytorch, pcd_pytorch)
+    #loss = point_mesh_face_distance(mesh_pytorch, pcd_pytorch)
+    print(cham_loss)

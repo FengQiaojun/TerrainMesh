@@ -7,15 +7,10 @@ import matplotlib.pyplot as plt
 import torch
 from pytorch3d.io import save_obj
 from pytorch3d.ops import sample_points_from_meshes
-from pytorch3d.renderer import (
-    SfMPerspectiveCameras,
-    RasterizationSettings,
-    MeshRasterizer,
-)
 from pytorch3d.structures import Meshes
-from meshing import regular_512_576, regular_512_1024, regular_512_29584, regular_512_90000
-from mesh_init_linear_solver import init_mesh, init_mesh_barycentric, MeshRendererWithFragmentsOnly
-from mesh_opt import pytorch3d_mesh_dense_opt
+from meshing import regular_512_29584
+from mesh_opt import pytorch3d_mesh_dense_opt, pytorch3d_mesh_dense_chamfer_opt
+from mesh_renderer import mesh_render_depth
 
 dataset_dir = "/mnt/NVMe-2TB/qiaojun/SensatUrban/"
 dataset_name_list = ["birmingham_2", "birmingham_3", "birmingham_4", "birmingham_5", "birmingham_6", "cambridge_4",
@@ -47,8 +42,8 @@ for dataset_name in dataset_name_list:
         os.mkdir(os.path.join(curr_dir, "Meshes"))
 
     for idx in range(num_imgs):
-        if os.path.exists(os.path.join(curr_dir, "Meshes", "%04d.obj" % idx)):
-            continue
+        #if os.path.exists(os.path.join(curr_dir, "Meshes", "%04d.obj" % idx)):
+        #    continue
         if (idx%10==0):
             print(idx)
         depth_img_path_read = os.path.join(curr_dir, "Depths", "%04d.png" % idx)
@@ -58,13 +53,21 @@ for dataset_name in dataset_name_list:
         num_depth = np.sum(depth_available_map)
         mean_depth = np.sum(depth_img)/num_depth
 
-        img_loss_depth_full,new_mesh = pytorch3d_mesh_dense_opt(vertices_dense*mean_depth, faces_dense, depth_img, image_size, focal_length, iters=100, return_mesh=True, GPU_id="0", w_laplacian=20, w_edge=0)
+        img_loss_depth_full,new_mesh = pytorch3d_mesh_dense_opt(vertices_dense*mean_depth, faces_dense, depth_img, image_size, focal_length, iters=100, return_mesh=True, GPU_id="0", w_laplacian=10, w_edge=5)
         final_verts, final_faces = new_mesh.get_mesh_verts_faces(0)
         # (?) Sometimes invalid result happens
         while not torch.isfinite(final_verts).all():
-            img_loss_depth_full,new_mesh = pytorch3d_mesh_dense_opt(vertices_dense*mean_depth, faces_dense, depth_img, image_size, focal_length, iters=100, return_mesh=True, GPU_id="0", w_laplacian=20, w_edge=0)
+            img_loss_depth_full,new_mesh = pytorch3d_mesh_dense_opt(vertices_dense*mean_depth, faces_dense, depth_img, image_size, focal_length, iters=100, return_mesh=True, GPU_id="0", w_laplacian=10, w_edge=5)
             final_verts, final_faces = new_mesh.get_mesh_verts_faces(0)
         
+        img_loss_depth_full,new_mesh = pytorch3d_mesh_dense_chamfer_opt(final_verts, faces_dense, depth_img, image_size,cam_c, cam_f, iters=30, return_mesh=True, GPU_id="0", w_laplacian=20, num_samples=20000, lr=0.1)
+        final_verts, final_faces = new_mesh.get_mesh_verts_faces(0)
+
+        depth_rendered = mesh_render_depth(new_mesh,image_size=image_size,focal_length=focal_length,GPU_id="0")        
+        depth_error = np.sum(np.abs(depth_img-depth_rendered)*depth_available_map) / num_depth
+        if (depth_error > 2):
+            print(dataset_name, idx, depth_error)
+
         final_obj = os.path.join(curr_dir, "Meshes", "%04d.obj" % idx)
         save_obj(final_obj, final_verts, final_faces)
         points_gt = sample_points_from_meshes(new_mesh, num_samples=10000, return_normals=False)[0].detach().cpu()

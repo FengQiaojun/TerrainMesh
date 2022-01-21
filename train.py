@@ -41,3 +41,5 @@ if __name__ == "__main__":
     # Build the optimizer
     optimizer = build_optimizer(cfg, model)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.3, patience=2, threshold=1e-3)
+
+    
