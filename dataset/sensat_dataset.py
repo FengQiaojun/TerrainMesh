@@ -115,6 +115,8 @@ class SensatSemanticDataset(Dataset):
             gt_depth /= mean_depth
         gt_depth = transforms.ToTensor()(gt_depth)
         gt_mesh_pcd = torch.load(gt_mesh_pcd_path)
+        if self.normalized_depth:
+            gt_mesh_pcd /= mean_depth
         sem_img = np.asfarray(imread(sem_img_path), dtype=np.int8)
         sem_img = torch.tensor(sem_img, dtype = torch.long)
         return rgb_img, sparse_depth, depth_edt, init_mesh_v, init_mesh_f, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img

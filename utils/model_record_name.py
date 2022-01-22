@@ -17,5 +17,5 @@ def generate_model_record_name(cfg, prefix):
     depth_normalized = ""
     if cfg.DATASETS.NORMALIZE_DEPTH:
         depth_normalized = "dnorm"
-    model_name = "%02d%02d_%02d%02d_" % (now.month, now.day, now.hour, now.minute)+cfg.DATASETS.MESHING+"_"+"depth"+str(cfg.DATASETS.SAMPLES)+"_"+depth_normalized+"_"+supervision+"_"+"channel"+str(cfg.MODEL.CHANNELS)+"_"+str(cfg.MODEL.MESH_HEAD.NUM_STAGES)+"_"+str(cfg.MODEL.MESH_HEAD.NUM_GRAPH_CONVS)+"_"+str(cfg.MODEL.MESH_HEAD.GRAPH_CONV_DIM)+"_"+str(cfg.SOLVER.BASE_LR)
+    model_name = "%02d%02d_%02d%02d_" % (now.month, now.day, now.hour, now.minute)+"_"+cfg.MODEL.BACKBONE+"_"+cfg.DATASETS.MESHING+"_"+"depth"+str(cfg.DATASETS.SAMPLES)+"_"+depth_normalized+"_"+supervision+"_"+"channel"+str(cfg.MODEL.CHANNELS)+"_"+str(cfg.MODEL.MESH_HEAD.NUM_STAGES)+"_"+str(cfg.MODEL.MESH_HEAD.NUM_GRAPH_CONVS)+"_"+str(cfg.MODEL.MESH_HEAD.GRAPH_CONV_DIM)+"_"+str(cfg.SOLVER.BASE_LR)
     return os.path.join(prefix, model_name)

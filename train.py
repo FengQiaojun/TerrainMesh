@@ -79,6 +79,7 @@ if __name__ == "__main__":
     #for epoch in range(10):
 
         # Validation
+        
         if (epoch)%10 == 0 or epoch+1 == cfg.SOLVER.NUM_EPOCHS:
             num_count = 0
             loss_sum = 0
@@ -101,34 +102,41 @@ if __name__ == "__main__":
         
                 loss, losses = loss_fn(mesh_pred, gt_mesh_pcd, gt_depth, gt_semantic)
                 loss_sum += loss.detach().cpu().numpy()*rgb_img.shape[0]
-                loss_chamfer_sum += losses["chamfer_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)].detach().cpu().numpy()*rgb_img.shape[0]
-                loss_depth_sum += losses["depth_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)].detach().cpu().numpy()*rgb_img.shape[0]
-                loss_semantic_sum += losses["coverage_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)].detach().cpu().numpy()*rgb_img.shape[0]
+                
+                if cfg.MODEL.MESH_HEAD.CHAMFER_LOSS_WEIGHT > 0:
+                    loss_chamfer_sum += losses["chamfer_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)].detach().cpu().numpy()*rgb_img.shape[0]
+                if cfg.MODEL.MESH_HEAD.DEPTH_LOSS_WEIGHT > 0:
+                    loss_depth_sum += losses["depth_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)].detach().cpu().numpy()*rgb_img.shape[0]
+                if cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
+                    loss_semantic_sum += losses["semantic_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)].detach().cpu().numpy()*rgb_img.shape[0]
                 num_count += rgb_img.shape[0]
 
-            writer.add_scalar("Loss/val/epoch", loss_sum/num_count, epoch)
-            writer.add_scalar("Loss/val/epoch/chamfer", loss_chamfer_sum/num_count, epoch)   
-            writer.add_scalar("Loss/val/epoch/depth", loss_depth_sum/num_count, epoch)   
-            writer.add_scalar("Loss/val/epoch/semantic", loss_semantic_sum/num_count, epoch)   
-                           
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 }, save_path+"/model_%d.tar"%(epoch))
-            if loss_chamfer_sum/num_count < min_chamfer_error:
-                min_chamfer_error = loss_chamfer_sum/num_count
-                min_chamfer_epoch = epoch
-                shutil.copyfile(save_path+"/model_%d.tar"%(epoch), save_path+"/model_best_chamfer.tar")
-            if loss_depth_sum/num_count < min_depth_error:
-                min_depth_error = loss_depth_sum/num_count
-                min_depth_epoch = epoch
-                shutil.copyfile(save_path+"/model_%d.tar"%(epoch), save_path+"/model_best_depth.tar")
-            if loss_semantic_sum/num_count < min_semantic_error:
-                min_semantic_error = loss_semantic_sum/num_count
-                min_semantic_epoch = epoch
-                shutil.copyfile(save_path+"/model_%d.tar"%(epoch), save_path+"/model_best_semantic.tar")
             
+            writer.add_scalar("Loss/val/epoch", loss_sum/num_count, epoch)
+            if cfg.MODEL.MESH_HEAD.CHAMFER_LOSS_WEIGHT > 0:
+                writer.add_scalar("Loss/val/epoch/chamfer", loss_chamfer_sum/num_count, epoch)   
+                if loss_chamfer_sum/num_count < min_chamfer_error:
+                    min_chamfer_error = loss_chamfer_sum/num_count
+                    min_chamfer_epoch = epoch
+                    shutil.copyfile(save_path+"/model_%d.tar"%(epoch), save_path+"/model_best_chamfer.tar")
+            if cfg.MODEL.MESH_HEAD.DEPTH_LOSS_WEIGHT > 0:
+                writer.add_scalar("Loss/val/epoch/depth", loss_depth_sum/num_count, epoch)   
+                if loss_depth_sum/num_count < min_depth_error:
+                    min_depth_error = loss_depth_sum/num_count
+                    min_depth_epoch = epoch
+                    shutil.copyfile(save_path+"/model_%d.tar"%(epoch), save_path+"/model_best_depth.tar")            
+            if cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
+                writer.add_scalar("Loss/val/epoch/semantic", loss_semantic_sum/num_count, epoch)                     
+                if loss_semantic_sum/num_count < min_semantic_error:
+                    min_semantic_error = loss_semantic_sum/num_count
+                    min_semantic_epoch = epoch
+                    shutil.copyfile(save_path+"/model_%d.tar"%(epoch), save_path+"/model_best_semantic.tar")
+              
 
         num_count = 0
         loss_sum = 0
@@ -136,7 +144,8 @@ if __name__ == "__main__":
         loss_depth_sum = 0
         loss_semantic_sum = 0
         model.train()
-        for i, batch in tqdm(enumerate(loaders["train"]),total=batch_num_train):
+        loop = tqdm(enumerate(loaders["train"]),total=batch_num_train)
+        for i, batch in loop:
             batch = loaders["train"].postprocess(batch, device)
             rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_render_depth, gt_depth, gt_mesh_pcd, gt_semantic = batch 
             # Concatenate the inputs
@@ -149,12 +158,20 @@ if __name__ == "__main__":
             mesh_pred = model(input_img, init_mesh)
     
             loss, losses = loss_fn(mesh_pred, gt_mesh_pcd, gt_depth, gt_semantic)
-            writer.add_scalar("Loss/train/batch/chamfer", losses["chamfer_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)], epoch*batch_num_train+i)
-            writer.add_scalar("Loss/train/batch/depth", losses["depth_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)], epoch*batch_num_train+i)
-            writer.add_scalar("Loss/train/batch/semantic", losses["semantic_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)], epoch*batch_num_train+i)
-            loss_chamfer_sum += losses["chamfer_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)].detach().cpu().numpy()*rgb_img.shape[0]
-            loss_depth_sum += losses["depth_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)].detach().cpu().numpy()*rgb_img.shape[0]
-            loss_semantic_sum += losses["semantic_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)].detach().cpu().numpy()*rgb_img.shape[0]
+            if cfg.MODEL.MESH_HEAD.CHAMFER_LOSS_WEIGHT > 0:
+                writer.add_scalar("Loss/train/batch/chamfer", losses["chamfer_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)], epoch*batch_num_train+i)
+                loss_chamfer_sum += losses["chamfer_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)].detach().cpu().numpy()*rgb_img.shape[0]
+            if cfg.MODEL.MESH_HEAD.DEPTH_LOSS_WEIGHT > 0:
+                writer.add_scalar("Loss/train/batch/depth", losses["depth_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)], epoch*batch_num_train+i)
+                loss_depth_sum += losses["depth_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)].detach().cpu().numpy()*rgb_img.shape[0]
+            if cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
+                writer.add_scalar("Loss/train/batch/semantic", losses["semantic_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)], epoch*batch_num_train+i)
+                loss_semantic_sum += losses["semantic_%d"%(cfg.MODEL.MESH_HEAD.NUM_STAGES-1)].detach().cpu().numpy()*rgb_img.shape[0]
+
+            loop.set_description('chamfer_0 = %.6f, depth_0 = %.6f, edge_0 = %.6f, laplacian_0 = %.6f' % (losses["chamfer_0"],losses["depth_0"],losses["edge_0"],losses["laplacian_0"]))
+            if cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
+                loop.set_description('chamfer_0 = %.6f, depth_0 = %.6f, semantic_0 = %.6f, edge_0 = %.6f, laplacian_0 = %.6f' % (losses["chamfer_0"],losses["depth_0"],losses["semantic_0"],losses["edge_0"],losses["laplacian_0"]))
+            
 
             optimizer.zero_grad()
             loss.backward()
@@ -164,7 +181,10 @@ if __name__ == "__main__":
             num_count += rgb_img.shape[0]
             
         writer.add_scalar("Loss/train/epoch", loss_sum/num_count, epoch)   
-        writer.add_scalar("Loss/train/epoch/chamfer", loss_chamfer_sum/num_count, epoch)   
-        writer.add_scalar("Loss/train/epoch/depth", loss_depth_sum/num_count, epoch)   
-        writer.add_scalar("Loss/train/epoch/semantic", loss_semantic_sum/num_count, epoch)  
+        if cfg.MODEL.MESH_HEAD.CHAMFER_LOSS_WEIGHT > 0:
+            writer.add_scalar("Loss/train/epoch/chamfer", loss_chamfer_sum/num_count, epoch)   
+        if cfg.MODEL.MESH_HEAD.DEPTH_LOSS_WEIGHT > 0:
+            writer.add_scalar("Loss/train/epoch/depth", loss_depth_sum/num_count, epoch)   
+        if cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
+            writer.add_scalar("Loss/train/epoch/semantic", loss_semantic_sum/num_count, epoch)  
         
