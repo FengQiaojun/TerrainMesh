@@ -15,7 +15,7 @@ def _identity(x):
 
 
 def build_data_loader(
-    cfg, dataset, split_name, num_workers=8, multigpu=False, shuffle=True, num_samples=None
+    cfg, dataset, split_name, num_workers=8, multigpu=False, shuffle=True
 ):
 
     batch_size = cfg.SOLVER.BATCH_SIZE
@@ -45,6 +45,7 @@ def build_data_loader(
             meshing=cfg.DATASETS.MESHING,
             samples=cfg.DATASETS.SAMPLES,
             depth_scale=cfg.DATASETS.DEPTH_SCALE,
+            normalized_depth=cfg.DATASETS.NORMALIZE_DEPTH,
             normalize_images=cfg.DATASETS.NORMALIZE_IMAGES,
         )
         collate_fn = SensatSemanticDataset.collate_fn

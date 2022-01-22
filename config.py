@@ -23,22 +23,6 @@ def get_sensat_cfg():
     cfg.MODEL.CHECKPOINT = "./checkpoints"  # path to checkpoint
 
     # ------------------------------------------------------------------------ #
-    # Voxel Head
-    # ------------------------------------------------------------------------ #
-    cfg.MODEL.VOXEL_HEAD = CN()
-    # The number of convs in the voxel head and the number of channels
-    cfg.MODEL.VOXEL_HEAD.NUM_CONV = 0
-    cfg.MODEL.VOXEL_HEAD.CONV_DIM = 256
-    # Normalization method for the convolution layers. Options: "" (no norm), "GN"
-    cfg.MODEL.VOXEL_HEAD.NORM = ""
-    # The number of depth channels for the predicted voxels
-    cfg.MODEL.VOXEL_HEAD.VOXEL_SIZE = 28
-    cfg.MODEL.VOXEL_HEAD.LOSS_WEIGHT = 1.0
-    cfg.MODEL.VOXEL_HEAD.CUBIFY_THRESH = 0.0
-    # voxel only iterations
-    cfg.MODEL.VOXEL_HEAD.VOXEL_ONLY_ITERS = 100
-
-    # ------------------------------------------------------------------------ #
     # Mesh Head
     # ------------------------------------------------------------------------ #
     cfg.MODEL.MESH_HEAD = CN()
@@ -57,13 +41,16 @@ def get_sensat_cfg():
     cfg.MODEL.MESH_HEAD.EDGE_LOSS_WEIGHT = 1.0
     cfg.MODEL.MESH_HEAD.LAPLACIAN_LOSS_WEIGHT = 1.0
     cfg.MODEL.MESH_HEAD.DEPTH_LOSS_WEIGHT = 1.0
+    cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT = 1.0
     # Init ico_sphere level (only for when voxel_on is false)
     cfg.MODEL.MESH_HEAD.ICO_SPHERE_LEVEL = -1
-    cfg.MODEL.MESH_HEAD.SUPERVISION = "3D"
     # Mesh semantic label
     cfg.MODEL.MESH_HEAD.NUM_CLASSES = 5
     # Mesh projection focal length
     cfg.MODEL.MESH_HEAD.FOCAL_LENGTH = 2
+    # Rendered image size
+    cfg.MODEL.MESH_HEAD.IMAGE_SIZE = 512
+    cfg.MODEL.MESH_HEAD.NUM_VERTICES = 1024
 
     # ------------------------------------------------------------------------ #
     # Datasets
@@ -77,6 +64,7 @@ def get_sensat_cfg():
     cfg.DATASETS.NORMALIZE_IMAGES = True
     cfg.DATASETS.SHUFFLE = True
     cfg.DATASETS.NUM_THREADS = 0
+    cfg.DATASETS.NORMALIZE_DEPTH = True
     
     # ------------------------------------------------------------------------ #
     # Solver

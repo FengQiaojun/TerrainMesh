@@ -16,6 +16,10 @@ from mesh_init.meshing import regular_512_576, regular_512_1024
 from mesh_init.mesh_renderer import render_mesh_vertex_texture
 from dataset.build_data_loader import build_data_loader
 from config import get_sensat_cfg
+from utils.project_verts import project_verts
+
+cam_c = 256
+cam_f = 512
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -24,9 +28,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 cfg = get_sensat_cfg()
 cfg_file = "Sensat_basic.yaml"
 cfg.merge_from_file(cfg_file)
-cfg.SOLVER.BATCH_SIZE = 1
+cfg.SOLVER.BATCH_SIZE = 2
 cfg.DATASETS.SHUFFLE = False
-train_loader = build_data_loader(cfg, "Sensat", split_name="train_birmingham")
+train_loader = build_data_loader(cfg, "Sensat", split_name="train_birmingham", shuffle=False)
 print("train_loader successful")
 batch_num_train = int(np.ceil(len(train_loader.dataset)/train_loader.batch_size))
 print("Training set size %d"%len(train_loader.dataset))
@@ -92,23 +96,33 @@ while cur_epochs < total_epochs:
         images = images.to(device, dtype=torch.float32)
         labels = labels.to(device, dtype=torch.long)
         outputs = model(images)
+        
         img_predict_2d_class = outputs.detach().cpu().numpy()[0,:,:]
         img_predict_2d = np.argmax(img_predict_2d_class,axis=0)
 
         # step 1: get the normalized mesh vertices and 
         vertices,faces,_ = regular_512_1024()
-        vertices = (vertices-256)/256
+        vertices = (vertices-cam_c)/cam_f
         vertices = np.hstack((vertices,np.ones((vertices.shape[0],1))))
         vertices = torch.Tensor(vertices).unsqueeze(0).to(device)
         faces = torch.Tensor(faces).unsqueeze(0).to(device)
         # step 2: get the feature map
+        print("outputs.shape",outputs.shape)
         features = outputs[0,::]
         features = features[None, :]
         print("features.shape",features.shape)
         # step 3: retrieve the per-vertex features
-        vert_align_feats = vert_align(features, vertices)
+        P = [
+                [2.0, 0.0, 0.0, 0.0],
+                [0.0, 2.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        P = torch.tensor(P)[None].repeat(1, 1, 1).to(device)
+        vert_pos_packed = project_verts(vertices, P)
+        vert_align_feats = vert_align(features, vert_pos_packed)
         # step 4: render the mesh for 2D image
-        mesh_img, mesh_depth = render_mesh_vertex_texture(verts=vertices[0,:],faces=faces[0,:],feats=vert_align_feats,image_size=512,device=device)
+        mesh_img, mesh_depth = render_mesh_vertex_texture(verts=vertices[0,:],faces=faces[0,:],feats=vert_align_feats,image_size=512,focal_length=-2,device=device)
         print(mesh_img.shape)
         img_predict = mesh_img
         img_predict = img_predict.detach().cpu().numpy()[0,:,:]

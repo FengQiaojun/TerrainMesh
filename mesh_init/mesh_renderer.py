@@ -48,14 +48,14 @@ class TextureShader(nn.Module):
         images = torch.squeeze(colors,dim=3)
         return images
 
-def render_mesh_vertex_texture(verts,faces,feats,image_size=512,device=None):
+def render_mesh_vertex_texture(verts,faces,feats,image_size=512,focal_length=-1,device=None):
     textures = TexturesVertex(verts_features=feats.to(device))
-    #mesh = Meshes(verts=[verts.to(device)], faces=[faces.to(device)], textures=textures)
     mesh = Meshes(verts=[verts.to(device)], faces=[faces.to(device)])
     mesh.textures = textures
+    #mesh = Meshes(verts=[verts.to(device)], faces=[faces.to(device)], textures=textures)
     R = torch.eye(3,device=device).reshape((1,3,3))
     T = torch.zeros(1,3,device=device)
-    cameras = PerspectiveCameras(device=device, R=R, T=T, focal_length=-1,)
+    cameras = SfMPerspectiveCameras(device=device, R=R, T=T, focal_length=focal_length,)
     raster_settings = RasterizationSettings(
         image_size=image_size, 
         blur_radius=0.00001,
@@ -119,7 +119,7 @@ def pcd_from_depth(depth_img, cam_c, cam_f, to_pytorch3d=False):
 
 dataset_dir = "/mnt/NVMe-2TB/qiaojun/SensatUrban/"
 dataset_name = "cambridge_4"
-data_idx = "0608"
+data_idx = "0000"
 cam_c = 256
 cam_f = 512
 
@@ -128,13 +128,15 @@ if __name__ == "__main__":
     depth_img = imread(os.path.join(dataset_dir,dataset_name,"Depths",data_idx+".png"))/100
     depth_img = depth_img.astype(np.float32)
     pcd = pcd_from_depth(depth_img, cam_c, cam_f)
+    o3d.io.write_point_cloud("0000.ply",pcd)
     o3d.visualization.draw_geometries([pcd,mesh],mesh_show_back_face=True)
 
+    '''
     pcd_pytorch = pcd_from_depth(depth_img,cam_c,cam_f,to_pytorch3d=True)
     pcd_pytorch.to(device=torch.device("cuda:1"))
     mesh_pytorch = Meshes(verts=[torch.tensor(mesh.vertices, dtype=torch.float32)], faces=[torch.tensor(mesh.triangles, dtype=torch.int64)])
     mesh_pytorch.to(device=torch.device("cuda:1"))
     mesh_pcd_pytorch = sample_points_from_meshes(mesh_pytorch, num_samples=10000, return_normals=False)
     cham_loss, _ = chamfer_distance(mesh_pcd_pytorch, pcd_pytorch)
-    #loss = point_mesh_face_distance(mesh_pytorch, pcd_pytorch)
     print(cham_loss)
+    '''

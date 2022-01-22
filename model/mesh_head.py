@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 from pytorch3d.ops import GraphConv, SubdivideMeshes, vert_align
+from pytorch3d.renderer import TexturesVertex
 from torch.nn import functional as F
 
 from utils.project_verts import project_verts
@@ -18,13 +19,14 @@ class MeshRefinementHead(nn.Module):
         stage_depth     = cfg.MODEL.MESH_HEAD.NUM_GRAPH_CONVS
         graph_conv_init = cfg.MODEL.MESH_HEAD.GRAPH_CONV_INIT
         num_classes     = cfg.MODEL.MESH_HEAD.NUM_CLASSES
+        num_vertices    = cfg.MODEL.MESH_HEAD.NUM_VERTICES
         # fmt: on
 
         self.stages = nn.ModuleList()
         for i in range(self.num_stages):
             vert_feat_dim = 0 if i == 0 else hidden_dim
             stage = MeshRefinementStage(
-                input_channels, vert_feat_dim, hidden_dim, num_classes, stage_depth, gconv_init=graph_conv_init
+                input_channels, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init=graph_conv_init
             )
             self.stages.append(stage)
 
@@ -54,7 +56,7 @@ class MeshRefinementHead(nn.Module):
 
 
 class MeshRefinementStage(nn.Module):
-    def __init__(self, img_feat_dim, vert_feat_dim, hidden_dim, num_classes, stage_depth, gconv_init="normal"):
+    def __init__(self, img_feat_dim, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init="normal"):
         """
         Args:
           img_feat_dim (int): Dimension of features we will get from vert_align
@@ -66,10 +68,13 @@ class MeshRefinementStage(nn.Module):
         """
         super(MeshRefinementStage, self).__init__()
 
+        self.num_vertices = num_vertices
+        self.num_classes = num_classes 
+
         self.bottleneck = nn.Linear(img_feat_dim, hidden_dim)
 
         self.vert_offset = nn.Linear(hidden_dim + 3, 3)
-        self.vert_semantic = nn.Linear(hidden_dim + 3, num_classes)
+        self.vert_semantic = nn.Linear(hidden_dim + 3, self.num_classes)
 
         self.gconvs = nn.ModuleList()
         for i in range(stage_depth):
@@ -107,9 +112,6 @@ class MeshRefinementStage(nn.Module):
             vert_pos_packed = meshes.verts_packed()
 
         device, dtype = vert_pos_padded.device, vert_pos_padded.dtype
-        # flip y coordinate
-        #factor = torch.tensor([1, -1, 1], device=device, dtype=dtype).view(1, 1, 3)
-        #vert_pos_padded = vert_pos_padded * factor
         # Get features from the image
         vert_align_feats = vert_align(img_feats, vert_pos_padded)
         vert_align_feats = _padded_to_packed(vert_align_feats, verts_padded_to_packed_idx)
@@ -128,10 +130,14 @@ class MeshRefinementStage(nn.Module):
 
         # Predict a new mesh by offsetting verts
         vert_offsets = self.vert_offset(vert_feats)
-        
         meshes_out = meshes.offset_verts(vert_offsets)
-        meshes_out.texture = self.vert_semantic(vert_feats)
-
+        
+        meshes_textures = self.vert_semantic(vert_feats).view(-1, self.num_vertices, self.num_classes)
+        if meshes_out.textures is None:
+            meshes_out.textures = TexturesVertex(verts_features=torch.zeros(meshes_textures.shape, device=device))
+        meshes_out.textures._verts_features_padded = meshes_out.textures.verts_features_padded() + meshes_textures
+        #meshes_out.textures = TexturesVertex(verts_features=meshes_textures)
+        
         return meshes_out, vert_feats_nopos
 
 
