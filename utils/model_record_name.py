@@ -14,8 +14,8 @@ def generate_model_record_name(cfg, prefix):
     if cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
         supervision+="Semantic_"
     supervision = supervision[:-1]
-    depth_normalized = ""
+    depth_normalized = "_"
     if cfg.DATASETS.NORMALIZE_DEPTH:
-        depth_normalized = "dnorm"
-    model_name = "%02d%02d_%02d%02d_" % (now.month, now.day, now.hour, now.minute)+"_"+cfg.MODEL.BACKBONE+"_"+cfg.DATASETS.MESHING+"_"+"depth"+str(cfg.DATASETS.SAMPLES)+"_"+depth_normalized+"_"+supervision+"_"+"channel"+str(cfg.MODEL.CHANNELS)+"_"+str(cfg.MODEL.MESH_HEAD.NUM_STAGES)+"_"+str(cfg.MODEL.MESH_HEAD.NUM_GRAPH_CONVS)+"_"+str(cfg.MODEL.MESH_HEAD.GRAPH_CONV_DIM)+"_"+str(cfg.SOLVER.BASE_LR)
+        depth_normalized = "_dnorm_"
+    model_name = "%02d%02d_%02d%02d_" % (now.month, now.day, now.hour, now.minute)+cfg.MODEL.BACKBONE+"_"+cfg.DATASETS.TRAINSET+"_"+cfg.DATASETS.MESHING+"_"+"depth"+str(cfg.DATASETS.SAMPLES)+depth_normalized+supervision+"_"+"channel"+str(cfg.MODEL.CHANNELS)+"_"+str(cfg.MODEL.MESH_HEAD.NUM_STAGES)+"_"+str(cfg.MODEL.MESH_HEAD.NUM_GRAPH_CONVS)+"_"+str(cfg.MODEL.MESH_HEAD.GRAPH_CONV_DIM)+"_"+str(cfg.SOLVER.BASE_LR)
     return os.path.join(prefix, model_name)

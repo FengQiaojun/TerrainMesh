@@ -58,6 +58,9 @@ def get_sensat_cfg():
     cfg.DATASETS = CN()
     cfg.DATASETS.NAME = "Sensat"
     cfg.DATASETS.DATA_DIR = "."
+    cfg.DATASETS.TRAINSET = "train"
+    cfg.DATASETS.VALSET = "val"
+    cfg.DATASETS.TESTSET = "test"
     cfg.DATASETS.SAMPLES = 1000
     cfg.DATASETS.MESHING = ""
     cfg.DATASETS.DEPTH_SCALE = 100

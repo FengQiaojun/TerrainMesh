@@ -9,7 +9,7 @@ from tqdm import tqdm
 import time
 from pytorch3d.ops import vert_align
 
-from dataset import SensatSemanticDataset
+from dataset import SensatDataset
 from segmentation import network, utils
 from utils.semantic_labels import convert_class_to_rgb_sensat_full
 from mesh_init.meshing import regular_512_576, regular_512_1024
@@ -23,7 +23,7 @@ cam_f = 512
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-#train_dataset = SensatSemanticDataset(data_dir="/mnt/NVMe-2TB/qiaojun/SensatUrban",split="train_birmingham",samples = 1000,meshing = "mesh576",depth_scale=100,normalize_images=True)
+#train_dataset = SensatDataset(data_dir="/mnt/NVMe-2TB/qiaojun/SensatUrban",split="train_birmingham",samples = 1000,meshing = "mesh576",depth_scale=100,normalize_images=True)
 #train_loader = data.DataLoader(train_dataset, batch_size=1, shuffle=False, num_workers=0)
 cfg = get_sensat_cfg()
 cfg_file = "Sensat_basic.yaml"

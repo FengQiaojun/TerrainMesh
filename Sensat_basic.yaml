@@ -6,7 +6,7 @@ MODEL:
   CHANNELS: 4
   MESH_HEAD:
     NAME: "VoxMeshHead"
-    NUM_STAGES: 1
+    NUM_STAGES: 2
     NUM_GRAPH_CONVS: 3
     GRAPH_CONV_DIM: 64
     GRAPH_CONV_INIT: "normal"
@@ -17,7 +17,7 @@ MODEL:
     EDGE_LOSS_WEIGHT: 0.01
     LAPLACIAN_LOSS_WEIGHT: 0.5
     DEPTH_LOSS_WEIGHT: 3.0
-    SEMANTIC_LOSS_WEIGHT: 1.0
+    SEMANTIC_LOSS_WEIGHT: 5.0
     NUM_CLASSES: 5
     FOCAL_LENGTH: 10
     IMAGE_SIZE: 512
@@ -25,6 +25,9 @@ MODEL:
 DATASETS:
   NAME: "Sensat"
   DATA_DIR: "/mnt/NVMe-2TB/qiaojun/SensatUrban/"
+  TRAINSET: "train_cambridge"
+  VALSET: "train_cambridge"
+  TESTSET: "test_cambridge"
   SAMPLES: 1000
   MESHING: "mesh1024"
   DEPTH_SCALE: 100
@@ -36,7 +39,7 @@ SOLVER:
   BATCH_SIZE: 8 # 32
   BATCH_SIZE_EVAL: 4
   NUM_EPOCHS: 200
-  BASE_LR: 0.0005 # 0.0001
+  BASE_LR: 0.001 # 0.0005
   OPTIMIZER: "adam"
   LR_SCHEDULER_NAME: "constant"
   LOGGING_PERIOD: 50

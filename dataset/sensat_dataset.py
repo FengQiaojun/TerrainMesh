@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # - meshing: ["mesh576","mesh1024"]
 # - samples: [500,1000,2000,4000]
 # - depth_scale:
-class SensatSemanticDataset(Dataset):
+class SensatDataset(Dataset):
     def __init__(self, data_dir, split=None, meshing=None, samples=None, depth_scale=None, normalized_depth = False, normalize_images=True,):
         transform = [transforms.ToTensor()]
         # do imagenet normalization
@@ -68,9 +68,9 @@ class SensatSemanticDataset(Dataset):
                 self.sem_img_ids.append(os.path.join(
                     data_dir, seq, "Semantics_5", target))
 # Temporary testing            
-#                if len(self.rgb_img_ids) == 16:
-#                    break
-#            break    
+                if len(self.rgb_img_ids) == 660:
+                    break
+            break    
 # Temporary testing 
 
     def __len__(self):

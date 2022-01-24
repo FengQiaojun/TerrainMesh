@@ -6,14 +6,14 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import time
 
-from dataset import SensatSemanticDataset
+from dataset import SensatDataset
 from segmentation import network, utils
 from utils import denormalize,convert_class_to_rgb
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-train_dataset = SensatSemanticDataset(data_dir="/mnt/NVMe-2TB/qiaojun/SensatUrban",split="train_birmingham",normalize_images=True)
+train_dataset = SensatDataset(data_dir="/mnt/NVMe-2TB/qiaojun/SensatUrban",split="train_birmingham",normalize_images=True)
 train_loader = data.DataLoader(train_dataset, batch_size=1, shuffle=False, num_workers=1)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

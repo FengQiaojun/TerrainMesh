@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, Subse
 from torch.utils.data.distributed import DistributedSampler
 
 from .terrain_dataset import TerrainDataset
-from .sensat_dataset import SensatSemanticDataset
+from .sensat_dataset import SensatDataset
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ def build_data_loader(
         )
         collate_fn = TerrainDataset.collate_fn
     elif dataset == "Sensat":
-        dset = SensatSemanticDataset(
+        dset = SensatDataset(
             data_dir=cfg.DATASETS.DATA_DIR,
             split=split_name,
             meshing=cfg.DATASETS.MESHING,
@@ -48,7 +48,7 @@ def build_data_loader(
             normalized_depth=cfg.DATASETS.NORMALIZE_DEPTH,
             normalize_images=cfg.DATASETS.NORMALIZE_IMAGES,
         )
-        collate_fn = SensatSemanticDataset.collate_fn
+        collate_fn = SensatDataset.collate_fn
     else:
         raise ValueError("Dataset %s not registered" % dataset)
 
