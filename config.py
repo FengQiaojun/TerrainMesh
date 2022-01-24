@@ -23,6 +23,17 @@ def get_sensat_cfg():
     cfg.MODEL.CHECKPOINT = "./checkpoints"  # path to checkpoint
 
     # ------------------------------------------------------------------------ #
+    # Deeplab Segmentation
+    # ------------------------------------------------------------------------ #
+    cfg.MODEL.DEEPLAB = CN()
+    cfg.MODEL.DEEPLAB.LR = 0.01
+    cfg.MODEL.DEEPLAB.MOMENTUM = 0.9
+    cfg.MODEL.DEEPLAB.WEIGHT_DECAY = 1e-4
+    cfg.MODEL.DEEPLAB.SCHEDULER_STEP_SIZE = 50
+    cfg.MODEL.DEEPLAB.SCHEDULER_GAMMA = 0.3
+    cfg.MODEL.DEEPLAB.NUM_EPOCHS = 300
+
+    # ------------------------------------------------------------------------ #
     # Mesh Head
     # ------------------------------------------------------------------------ #
     cfg.MODEL.MESH_HEAD = CN()

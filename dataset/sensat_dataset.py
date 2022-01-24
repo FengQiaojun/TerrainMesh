@@ -157,6 +157,87 @@ class SensatDataset(Dataset):
         return rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img
 
 
+class SensatSemanticDataset(Dataset):
+    def __init__(self, data_dir, split=None, meshing=None, samples=None, depth_scale=None, normalized_depth = False, normalize_images=True,):
+        transform = [transforms.ToTensor()]
+        # do imagenet normalization
+        if normalize_images:
+            IMAGENET_MEAN = [0.485, 0.456, 0.406]
+            IMAGENET_STD = [0.229, 0.224, 0.225]
+            transform.append(transforms.Normalize(
+                mean=IMAGENET_MEAN, std=IMAGENET_STD))
+        self.transform = transforms.Compose(transform)
+
+        self.split = split
+        self.meshing = meshing
+        self.samples = samples
+        self.depth_scale = depth_scale
+        self.normalized_depth = normalized_depth
+
+        self.rgb_img_ids = []
+        self.sparse_depth_ids = []
+        self.depth_edt_ids = []
+        self.init_mesh_render_depth_ids = []
+        self.sem_img_ids = []
+
+        # split is the name of file containing list of sequence
+        if not os.path.isfile(os.path.join(data_dir, "split", split+".txt")):
+            print("split %s does not exist! Check again!\n" % split)
+            return 0
+        with open(os.path.join(data_dir, "split", split+".txt")) as f:
+            seq_idx_list = f.read().splitlines()
+        for seq in seq_idx_list:
+            for target in sorted(os.listdir(os.path.join(data_dir, seq, "Images"))):
+                target_idx = target[:-4]
+                self.rgb_img_ids.append(os.path.join(
+                    data_dir, seq, "Images", target))
+                self.sparse_depth_ids.append(os.path.join(
+                    data_dir, seq, "Pcds_"+str(samples), target))
+                self.depth_edt_ids.append(os.path.join(
+                    data_dir, seq, "Pcds_"+str(samples), target_idx+"_edt.pt"))
+                self.init_mesh_render_depth_ids.append(os.path.join(
+                    data_dir, seq, "Pcds_"+str(samples), target_idx+"_"+meshing+".png"))
+                self.sem_img_ids.append(os.path.join(
+                    data_dir, seq, "Semantics_5", target))
+# Temporary testing            
+#                if len(self.rgb_img_ids) == 660:
+#                    break
+#            break    
+# Temporary testing 
+
+    def __len__(self):
+        return len(self.rgb_img_ids)
+
+    def __getitem__(self, idx):
+        rgb_img_path = self.rgb_img_ids[idx]
+        sparse_depth_path = self.sparse_depth_ids[idx]
+        depth_edt_path = self.depth_edt_ids[idx]
+        init_mesh_render_depth_path = self.init_mesh_render_depth_ids[idx]
+        sem_img_path = self.sem_img_ids[idx]
+        
+        rgb_img = np.asfarray(imread(rgb_img_path)/255, dtype=np.float32)
+        rgb_img = self.transform(rgb_img)
+        # TODO: why divide by 1000?
+        depth_input_scale = 1000
+        sparse_depth = np.asfarray(
+            imread(sparse_depth_path)/self.depth_scale, dtype=np.float32)/depth_input_scale
+        if self.normalized_depth:
+            depth_available_map = sparse_depth>0
+            num_depth = np.sum(depth_available_map)
+            mean_depth = np.sum(sparse_depth)/num_depth*depth_input_scale
+        sparse_depth = transforms.ToTensor()(sparse_depth)
+        # TODO: why divide by 20?
+        edt_input_scale = 20
+        depth_edt = torch.clamp(torch.load(depth_edt_path).float()/edt_input_scale, min=0, max=2)
+        depth_edt = torch.unsqueeze(depth_edt, dim=0)
+        init_mesh_render_depth = np.asfarray(imread(
+            init_mesh_render_depth_path)/self.depth_scale, dtype=np.float32)/depth_input_scale
+        init_mesh_render_depth = transforms.ToTensor()(init_mesh_render_depth)
+        sem_img = np.asfarray(imread(sem_img_path), dtype=np.int8)
+        sem_img = torch.tensor(sem_img, dtype = torch.long)
+        return rgb_img, sparse_depth, depth_edt, init_mesh_render_depth, sem_img
+
+
 # define a data loading function that only read one instance in TerrainDataset(WHU)
 def load_data_by_index(cfg,
                        split="",

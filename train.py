@@ -31,7 +31,7 @@ if __name__ == "__main__":
     if not os.path.isdir(save_path):
         os.mkdir(save_path)
     shutil.copyfile(cfg_file, os.path.join(save_path,cfg_file))
-    writer = SummaryWriter(os.path.join(save_path,"logs"))
+    writer = SummaryWriter(os.path.join(save_path))
 
     # Specify the GPU
     worker_id = cfg.SOLVER.GPU_ID

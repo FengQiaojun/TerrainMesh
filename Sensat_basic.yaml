@@ -25,9 +25,9 @@ MODEL:
 DATASETS:
   NAME: "Sensat"
   DATA_DIR: "/mnt/NVMe-2TB/qiaojun/SensatUrban/"
-  TRAINSET: "train_cambridge"
-  VALSET: "train_cambridge"
-  TESTSET: "test_cambridge"
+  TRAINSET: "train"
+  VALSET: "val"
+  TESTSET: "test"
   SAMPLES: 1000
   MESHING: "mesh1024"
   DEPTH_SCALE: 100
