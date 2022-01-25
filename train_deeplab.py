@@ -11,7 +11,9 @@ from torch.utils.tensorboard import SummaryWriter
 
 from config import get_sensat_cfg
 from dataset.build_data_loader import build_data_loader
+from loss import FocalLoss
 from utils.model_record_name import generate_segmodel_record_name
+from utils.stream_metrics import StreamSegMetrics
 
 cfg_file = "Sensat_basic.yaml"
 
@@ -33,7 +35,6 @@ if __name__ == "__main__":
     # Build the model
     model = torch.hub.load('pytorch/vision:v0.8.0', 'deeplabv3_resnet50', pretrained=True)
     model.classifier[4] = nn.Conv2d(256, 5, kernel_size=1, stride=1)
-      
     model.backbone.conv1 = nn.Conv2d(cfg.MODEL.CHANNELS, 64, kernel_size=7, stride=2, padding=3, bias=False)
     model = nn.DataParallel(model)
     model.to(device)
@@ -47,7 +48,17 @@ if __name__ == "__main__":
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=cfg.MODEL.DEEPLAB.SCHEDULER_STEP_SIZE, gamma=cfg.MODEL.DEEPLAB.SCHEDULER_GAMMA)
 
     # Set up criterion
-    loss_fn = nn.CrossEntropyLoss(ignore_index=0, reduction='mean')
+    if cfg.MODEL.DEEPLAB.LOSS == "cross_entropy":
+        if cfg.MODEL.DEEPLAB.CLASS_WEIGHTED:
+            loss_fn = nn.CrossEntropyLoss(weight = torch.Tensor(cfg.MODEL.DEEPLAB.CLASS_WEIGHT).to(device), ignore_index=0, reduction='mean')
+        else:
+            loss_fn = nn.CrossEntropyLoss(ignore_index=0, reduction='mean')
+    elif cfg.MODEL.DEEPLAB.LOSS == "focal_loss":
+        if cfg.MODEL.DEEPLAB.CLASS_WEIGHTED:
+            loss_fn = FocalLoss(weight = torch.Tensor(cfg.MODEL.DEEPLAB.CLASS_WEIGHT).to(device), ignore_index=0, size_average=True)
+        else:
+            loss_fn = FocalLoss(ignore_index=0, size_average=True)
+    metrics = StreamSegMetrics(cfg.MODEL.DEEPLAB.NUM_CLASSES)
 
     # Build the DataLoaders 
     loaders = {}
@@ -68,22 +79,28 @@ if __name__ == "__main__":
             model.eval()
             loss_sum = 0
             num_count = 0
-            for i, batch in tqdm(enumerate(loaders["val"]),total=batch_num_val):
-                
-                rgb_img, sparse_depth, depth_edt, init_mesh_render_depth, gt_semantic = batch 
-                # Concatenate the inputs
-                if cfg.MODEL.CHANNELS == 3:
-                    input_img = rgb_img
-                elif cfg.MODEL.CHANNELS == 4:
-                    input_img = torch.cat((rgb_img,init_mesh_render_depth),dim=1)
-                elif cfg.MODEL.CHANNELS == 5:
-                    input_img = torch.cat((rgb_img,init_mesh_render_depth,depth_edt),dim=1)
-                input_img = input_img.to(device, dtype=torch.float32)
-                gt_semantic = gt_semantic.to(device, dtype=torch.long)
-                pred_semantic = model(input_img)["out"]                
-                loss = loss_fn(pred_semantic, gt_semantic)
-                loss_sum += loss.detach().cpu().numpy()*rgb_img.shape[0]
-                num_count += rgb_img.shape[0]
+            metrics.reset()
+
+            with torch.no_grad():
+                for i, batch in tqdm(enumerate(loaders["val"]),total=batch_num_val):
+                    
+                    rgb_img, sparse_depth, depth_edt, init_mesh_render_depth, gt_semantic = batch 
+                    # Concatenate the inputs
+                    if cfg.MODEL.CHANNELS == 3:
+                        input_img = rgb_img
+                    elif cfg.MODEL.CHANNELS == 4:
+                        input_img = torch.cat((rgb_img,init_mesh_render_depth),dim=1)
+                    elif cfg.MODEL.CHANNELS == 5:
+                        input_img = torch.cat((rgb_img,init_mesh_render_depth,depth_edt),dim=1)
+                    input_img = input_img.to(device, dtype=torch.float32)
+                    gt_semantic = gt_semantic.to(device, dtype=torch.long)
+                    pred_semantic = model(input_img)["out"]                
+                    loss = loss_fn(pred_semantic, gt_semantic)
+                    loss_sum += loss.detach().cpu().numpy()*rgb_img.shape[0]
+                    num_count += rgb_img.shape[0]
+                    
+                    preds = pred_semantic.detach().max(dim=1)[1].cpu().numpy()
+                    metrics.update(preds, gt_semantic.cpu().numpy())
 
             torch.save({
                 'epoch': epoch,
@@ -91,11 +108,17 @@ if __name__ == "__main__":
                 'optimizer_state_dict': optimizer.state_dict(),
                 }, save_path+"/model_%d.tar"%(epoch))
             
+            score = metrics.get_results()
+            writer.add_scalar("Acc/val/epoch", score['Overall Acc'], epoch)
+            writer.add_scalar("MeanIoU/val/epoch", score['Mean IoU'], epoch)
+            #writer.add_scalar("ClassIoU/val/epoch", score['Class IoU'], epoch)
+            
+
             writer.add_scalar("Loss/val/epoch", loss_sum/num_count, epoch)
             if loss_sum/num_count < min_error:
                 min_error = loss_sum/num_count
                 min_epoch = epoch
-                shutil.copyfile(save_path+"/model_%d.tar"%(epoch), save_path+"/model_best_chamfer.tar")
+                shutil.copyfile(save_path+"/model_%d.tar"%(epoch), save_path+"/model_best_semantic.tar")
 
             print("Best Epoch %d."%min_epoch)  
 

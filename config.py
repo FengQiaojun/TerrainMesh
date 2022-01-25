@@ -32,7 +32,11 @@ def get_sensat_cfg():
     cfg.MODEL.DEEPLAB.SCHEDULER_STEP_SIZE = 50
     cfg.MODEL.DEEPLAB.SCHEDULER_GAMMA = 0.3
     cfg.MODEL.DEEPLAB.NUM_EPOCHS = 300
-
+    cfg.MODEL.DEEPLAB.CLASS_WEIGHTED = False
+    cfg.MODEL.DEEPLAB.CLASS_WEIGHT = [1, 1, 1, 1, 1]
+    cfg.MODEL.DEEPLAB.LOSS = "cross_entropy"
+    cfg.MODEL.DEEPLAB.NUM_CLASSES = 5
+    
     # ------------------------------------------------------------------------ #
     # Mesh Head
     # ------------------------------------------------------------------------ #

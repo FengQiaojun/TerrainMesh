@@ -1,7 +1,11 @@
 TODO: 
-1. Write a pure semantic segmentation training using Deeplab V3. Use that to initialize the feature extration network.
-2. Get initial number of chamfer error and depth error.
-3. Comparison between
+* Load the resnet50 as the initialization for the model. 
+* Need to initialize the per-vertex feature.
+
+* A simpler model for segmentation. Using resnet 34 or resnet 18.
+
+* Get initial number of chamfer error and depth error.
+* Comparison between
     a. First train from scratch on semantic segmentation, then geometry
     b. First train with pretrained weight, then geometry
     c. Train all from scratch.
