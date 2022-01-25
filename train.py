@@ -36,7 +36,7 @@ if __name__ == "__main__":
     # Specify the GPU
     worker_id = cfg.SOLVER.GPU_ID
     device = torch.device("cuda:%d" % worker_id)
-
+    
     # Build the model
     model = VoxMeshHead(cfg)
     model.to(device)
@@ -144,7 +144,7 @@ if __name__ == "__main__":
                     min_semantic_epoch = epoch
                     shutil.copyfile(save_path+"/model_%d.tar"%(epoch), save_path+"/model_best_semantic.tar")
             print("Best Chamfer Epoch %d, Best Depth Epoch %d, Best Semantic Epoch %d."%(min_chamfer_epoch,min_depth_epoch,min_semantic_epoch))  
-
+        
         num_count = 0
         loss_sum = 0
         loss_chamfer_sum = [0]*cfg.MODEL.MESH_HEAD.NUM_STAGES

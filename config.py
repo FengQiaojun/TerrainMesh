@@ -13,8 +13,6 @@ def get_sensat_cfg():
     # ------------------------------------------------------------------------ #
     cfg.MODEL = CN()
     cfg.MODEL.BACKBONE = "resnet50"
-    cfg.MODEL.VOXEL_ON = False
-    cfg.MODEL.MESH_ON = False
     cfg.MODEL.CHANNELS = 3
 
     # ------------------------------------------------------------------------ #
@@ -36,12 +34,14 @@ def get_sensat_cfg():
     cfg.MODEL.DEEPLAB.CLASS_WEIGHT = [1, 1, 1, 1, 1]
     cfg.MODEL.DEEPLAB.LOSS = "cross_entropy"
     cfg.MODEL.DEEPLAB.NUM_CLASSES = 5
-    
+
     # ------------------------------------------------------------------------ #
     # Mesh Head
     # ------------------------------------------------------------------------ #
     cfg.MODEL.MESH_HEAD = CN()
     cfg.MODEL.MESH_HEAD.NAME = "VoxMeshHead"
+    cfg.MODEL.MESH_HEAD.SEM_PRETRAIN = False
+    cfg.MODEL.MESH_HEAD.MODEL_PATH = ""
     # Numer of stages
     cfg.MODEL.MESH_HEAD.NUM_STAGES = 1
     cfg.MODEL.MESH_HEAD.NUM_GRAPH_CONVS = 1  # per stage

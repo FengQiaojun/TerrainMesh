@@ -136,7 +136,6 @@ class MeshRefinementStage(nn.Module):
         if meshes_out.textures is None:
             meshes_out.textures = TexturesVertex(verts_features=torch.zeros(meshes_textures.shape, device=device))
         meshes_out.textures._verts_features_padded = meshes_out.textures.verts_features_padded() + meshes_textures
-        #meshes_out.textures = TexturesVertex(verts_features=meshes_textures)
         
         return meshes_out, vert_feats_nopos
 

@@ -34,11 +34,14 @@ _FEAT_DIMS = {
 }
 
 
-def build_backbone(name, in_channels, pretrained=True):
+def build_backbone(name, in_channels, ref_model, pretrained=True):
     resnets = ["resnet18", "resnet34", "resnet50", "resnet101", "resnet152"]
     if name in resnets and name in _FEAT_DIMS:
-        cnn = getattr(torchvision.models, name)(pretrained=pretrained)
-        backbone = ResNetBackbone(cnn,in_channels)
+        if ref_model is not None:
+            backbone = ResNetBackbone(ref_model,in_channels)
+        else:
+            cnn = getattr(torchvision.models, name)(pretrained=pretrained)
+            backbone = ResNetBackbone(cnn,in_channels)
         '''
         # disable the running average
         for child in backbone.children():

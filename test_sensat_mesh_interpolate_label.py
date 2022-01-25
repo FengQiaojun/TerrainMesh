@@ -120,6 +120,7 @@ while cur_epochs < total_epochs:
             ]
         P = torch.tensor(P)[None].repeat(1, 1, 1).to(device)
         vert_pos_packed = project_verts(vertices, P)
+
         vert_align_feats = vert_align(features, vert_pos_packed)
         # step 4: render the mesh for 2D image
         mesh_img, mesh_depth = render_mesh_vertex_texture(verts=vertices[0,:],faces=faces[0,:],feats=vert_align_feats,image_size=512,focal_length=-2,device=device)
