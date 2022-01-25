@@ -1,8 +1,6 @@
 TODO: 
-* Load the resnet50 as the initialization for the model. 
-* Need to initialize the per-vertex feature.
-
 * A simpler model for segmentation. Using resnet 34 or resnet 18.
+
 
 * Get initial number of chamfer error and depth error.
 * Comparison between
@@ -13,6 +11,14 @@ TODO:
 
 terrainmesh.txt:  
 This is the export file of a conda environment. 
+
+
+### Existing models:
+0124_2331_train_mesh1024_depth1000_channel3_focal_loss_50_0.01  
+The model for semantic segmentation initialization. Takes 3 channels as inputs.  
+
+0124_1722_train_mesh1024_depth1000_channel4_focal_loss_50_0.01
+The model for semantic segmentation initialization. Takes 4 channels as inputs.    
 
 
 **train.py**  

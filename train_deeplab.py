@@ -12,6 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 from config import get_sensat_cfg
 from dataset.build_data_loader import build_data_loader
 from loss import FocalLoss
+from model.deeplab import deeplabv3_resnet18, deeplabv3_resnet34, deeplabv3_resnet50
 from utils.model_record_name import generate_segmodel_record_name
 from utils.stream_metrics import StreamSegMetrics
 
@@ -29,21 +30,28 @@ if __name__ == "__main__":
     writer = SummaryWriter(os.path.join(save_path))
 
     # Specify the GPU. Here use 2 of them.
-    #worker_id = cfg.SOLVER.GPU_ID
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    worker_id = cfg.SOLVER.GPU_ID
+    device = torch.device("cuda:%d" % worker_id if torch.cuda.is_available() else 'cpu')
+    #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Build the model
-    model = torch.hub.load('pytorch/vision:v0.8.0', 'deeplabv3_resnet50', pretrained=True)
-    model.classifier[4] = nn.Conv2d(256, cfg.MODEL.DEEPLAB.NUM_CLASSES, kernel_size=1, stride=1)
-    model.backbone.conv1 = nn.Conv2d(cfg.MODEL.CHANNELS, 64, kernel_size=7, stride=2, padding=3, bias=False)
-    model = nn.DataParallel(model)
+    #model = torch.hub.load('pytorch/vision:v0.8.0', 'deeplabv3_resnet50', pretrained=True)
+    #model.classifier[4] = nn.Conv2d(256, cfg.MODEL.DEEPLAB.NUM_CLASSES, kernel_size=1, stride=1)
+    #model.backbone.conv1 = nn.Conv2d(cfg.MODEL.CHANNELS, 64, kernel_size=7, stride=2, padding=3, bias=False)
+    if cfg.MODEL.BACKBONE == "resnet50":
+        model = deeplabv3_resnet50(cfg)
+    elif cfg.MODEL.BACKBONE == "resnet34":
+        model = deeplabv3_resnet34(cfg)
+    elif cfg.MODEL.BACKBONE == "resnet18":
+        model = deeplabv3_resnet18(cfg)
+    #model = nn.DataParallel(model)
     model.to(device)
 
     # Build the optimizer
     # Set up optimizer
     optimizer = torch.optim.SGD(params=[
-        {'params': model.module.backbone.parameters(), 'lr': 0.1 * cfg.MODEL.DEEPLAB.LR},
-        {'params': model.module.classifier.parameters(), 'lr': cfg.MODEL.DEEPLAB.LR},
+        {'params': model.backbone.parameters(), 'lr': 0.1 * cfg.MODEL.DEEPLAB.LR},
+        {'params': model.classifier.parameters(), 'lr': cfg.MODEL.DEEPLAB.LR},
     ], lr=cfg.MODEL.DEEPLAB.LR, momentum=cfg.MODEL.DEEPLAB.MOMENTUM, weight_decay=cfg.MODEL.DEEPLAB.WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=cfg.MODEL.DEEPLAB.SCHEDULER_STEP_SIZE, gamma=cfg.MODEL.DEEPLAB.SCHEDULER_GAMMA)
 

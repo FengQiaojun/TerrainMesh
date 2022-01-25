@@ -1,5 +1,5 @@
 MODEL:
-  BACKBONE: "resnet50"
+  BACKBONE: "resnet18"
   CHECKPOINT: "./checkpoints"
   CHANNELS: 3
   DEEPLAB:

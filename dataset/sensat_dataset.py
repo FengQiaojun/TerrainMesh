@@ -68,9 +68,9 @@ class SensatDataset(Dataset):
                 self.sem_img_ids.append(os.path.join(
                     data_dir, seq, "Semantics_5", target))
 # Temporary testing            
-                if len(self.rgb_img_ids) == 660:
-                    break
-            break    
+#                if len(self.rgb_img_ids) == 660:
+#                    break
+#            break    
 # Temporary testing 
 
     def __len__(self):
