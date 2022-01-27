@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 import torch
 import torch.nn as nn
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from torch.utils.tensorboard import SummaryWriter
 
 from config import get_sensat_cfg
@@ -18,7 +18,7 @@ from utils.model_record_name import generate_model_record_name
 
 
 
-cfg_file = "Sensat_basic.yaml"
+cfg_file = "Sensat_single_tuning.yaml"
 
 
 
@@ -42,7 +42,8 @@ if __name__ == "__main__":
     model.to(device)
     # Build the optimizer
     optimizer = build_optimizer(cfg, model)
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.3, patience=2, threshold=1e-3)
+    #scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.3, patience=2, threshold=1e-3)
+    scheduler = StepLR(optimizer, step_size=cfg.SOLVER.SCHEDULER_STEP_SIZE, gamma=cfg.SOLVER.SCHEDULER_GAMMA)
 
     # Build the loss
     loss_fn_kwargs = {
@@ -64,7 +65,8 @@ if __name__ == "__main__":
     # Build the DataLoaders 
     loaders = {}
     loaders["train"] = build_data_loader(cfg, "Sensat", split_name=cfg.DATASETS.TRAINSET, num_workers=cfg.DATASETS.NUM_THREADS)
-    loaders["val"] = build_data_loader(cfg, "Sensat", split_name=cfg.DATASETS.VALSET, num_workers=cfg.DATASETS.NUM_THREADS)
+    loaders["val"] = build_data_loader(cfg, "Sensat", split_name=cfg.DATASETS.TRAINSET, num_workers=cfg.DATASETS.NUM_THREADS)
+    #loaders["val"] = build_data_loader(cfg, "Sensat", split_name=cfg.DATASETS.VALSET, num_workers=cfg.DATASETS.NUM_THREADS)
     batch_num_train = int(np.ceil(len(loaders["train"].dataset)/loaders["train"].batch_size))
     batch_num_val = int(np.ceil(len(loaders["val"].dataset)/loaders["val"].batch_size))
     print("Training set size %d. Training batch number %d."%(len(loaders["train"].dataset),batch_num_train))
@@ -121,8 +123,8 @@ if __name__ == "__main__":
                         loss_semantic_sum[i] += losses["semantic_%d"%i].detach().cpu().numpy()*rgb_img.shape[0]
                 num_count += rgb_img.shape[0]
 
-            scheduler.step(loss_sum/num_count)
-
+            scheduler.step()
+            
             torch.save({
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),

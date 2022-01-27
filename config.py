@@ -85,12 +85,14 @@ def get_sensat_cfg():
     cfg.DATASETS.NUM_THREADS = 0
     cfg.DATASETS.NORMALIZE_IMAGES = True
     cfg.DATASETS.NORMALIZE_MESH = True
-    
+    cfg.DATASETS.SIZE = 0
+
     # ------------------------------------------------------------------------ #
     # Solver
     # ------------------------------------------------------------------------ #
     cfg.SOLVER = CN()
-    cfg.SOLVER.LR_SCHEDULER_NAME = "constant"  # {'constant'}
+    cfg.SOLVER.SCHEDULER_STEP_SIZE = 50
+    cfg.SOLVER.SCHEDULER_GAMMA = 0.5
     cfg.SOLVER.NUM_EPOCHS = 300
     cfg.SOLVER.BASE_LR = 0.01
     cfg.SOLVER.OPTIMIZER = "sgd"  # {'sgd', 'adam'}

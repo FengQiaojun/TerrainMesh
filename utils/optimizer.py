@@ -9,4 +9,4 @@ def build_optimizer(cfg, model):
     if name == "sgd":
         return torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum)
     elif name == "adam":
-        return torch.optim.Adam(model.parameters(), lr=lr)
+        return torch.optim.Adam(model.parameters(), lr=lr, amsgrad=True)

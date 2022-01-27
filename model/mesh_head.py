@@ -94,6 +94,10 @@ class MeshRefinementStage(nn.Module):
         nn.init.zeros_(self.vert_offset.weight)
         nn.init.constant_(self.vert_offset.bias, 0)
 
+        if self.semantic:
+            nn.init.zeros_(self.vert_semantic.weight)
+            nn.init.constant_(self.vert_semantic.bias, 0)
+
     def forward(self, img_feats, meshes, vert_feats=None, P=None):
         """
         Args:

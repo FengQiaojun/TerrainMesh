@@ -49,6 +49,7 @@ def build_data_loader(
             depth_scale=cfg.DATASETS.DEPTH_SCALE,
             normalize_mesh=cfg.DATASETS.NORMALIZE_MESH,
             normalize_images=cfg.DATASETS.NORMALIZE_IMAGES,
+            size=cfg.DATASETS.SIZE if cfg.DATASETS.SIZE!=0 else None
         )
         collate_fn = SensatDataset.collate_fn
         loader_kwargs = {"batch_size": batch_size,
