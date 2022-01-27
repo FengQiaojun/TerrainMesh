@@ -102,7 +102,10 @@ if __name__ == "__main__":
                         input_img = torch.cat((rgb_img,init_mesh_render_depth,depth_edt),dim=1)
                     input_img = input_img.to(device, dtype=torch.float32)
                     gt_semantic = gt_semantic.to(device, dtype=torch.long)
-                    pred_semantic = model(input_img)["out"]                
+                    if cfg.MODEL.BACKBONE == "resnet50":
+                        pred_semantic = model(input_img)["out"]                
+                    else:
+                        pred_semantic = model(input_img)             
                     loss = loss_fn(pred_semantic, gt_semantic)
                     loss_sum += loss.detach().cpu().numpy()*rgb_img.shape[0]
                     num_count += rgb_img.shape[0]
@@ -145,7 +148,10 @@ if __name__ == "__main__":
                 input_img = torch.cat((rgb_img,init_mesh_render_depth,depth_edt),dim=1)
             input_img = input_img.to(device, dtype=torch.float32)
             gt_semantic = gt_semantic.to(device, dtype=torch.long)
-            pred_semantic = model(input_img)["out"]
+            if cfg.MODEL.BACKBONE == "resnet50":
+                pred_semantic = model(input_img)["out"]                
+            else:
+                pred_semantic = model(input_img) 
             loss = loss_fn(pred_semantic, gt_semantic)
 
             optimizer.zero_grad()

@@ -1,4 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+import matplotlib.pyplot as plt
 import logging
 import torch
 import torch.nn as nn
@@ -51,6 +52,7 @@ class MeshHybridLoss(nn.Module):
     def __init__(
         self,
         image_size,
+        focal_length,
         chamfer_weight=1.0,
         depth_weight=1.0,
         normal_weight=0.0,
@@ -59,9 +61,11 @@ class MeshHybridLoss(nn.Module):
         semantic_weight=0.1,
         gt_num_samples=10000,
         pred_num_samples=10000,
+        semantic=True,
         device=None):
         super(MeshHybridLoss, self).__init__()
         self.image_size = image_size
+        self.focal_length = focal_length
         self.depth_weight = depth_weight
         self.chamfer_weight = chamfer_weight
         self.normal_weight = normal_weight
@@ -70,11 +74,12 @@ class MeshHybridLoss(nn.Module):
         self.semantic_weight = semantic_weight
         self.gt_num_samples = gt_num_samples
         self.pred_num_samples = pred_num_samples
+        self.semantic = semantic
         R = torch.eye(3).reshape((1,3,3))
         R = R.to(device)
         T = torch.zeros(1,3)
         T = T.to(device)
-        cameras = SfMPerspectiveCameras(device=device, R=R, T=T, focal_length=-10)
+        cameras = SfMPerspectiveCameras(device=device, R=R, T=T, focal_length=-self.focal_length)
         # Define the Rasterization
         raster_settings = RasterizationSettings(
             image_size=self.image_size, 
@@ -149,7 +154,7 @@ class MeshHybridLoss(nn.Module):
                 total_loss = total_loss + self.laplacian_weight * laplacian_loss
                 losses["laplacian_%d"%i] = laplacian_loss
             # Semantic Segmentation weight
-            if (self.semantic_weight > 0):
+            if (self.semantic and self.semantic_weight > 0):
                 semantic_predict = self.renderer_semantic(cur_meshes_pred).permute(0,3,1,2)
                 criterion = nn.CrossEntropyLoss(ignore_index=0, reduction='mean')
                 semantic_loss = criterion(semantic_predict, gt_semantic)

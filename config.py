@@ -14,6 +14,7 @@ def get_sensat_cfg():
     cfg.MODEL = CN()
     cfg.MODEL.BACKBONE = "resnet50"
     cfg.MODEL.CHANNELS = 3
+    cfg.MODEL.SEMANTIC = False
 
     # ------------------------------------------------------------------------ #
     # Checkpoint
@@ -34,6 +35,7 @@ def get_sensat_cfg():
     cfg.MODEL.DEEPLAB.CLASS_WEIGHT = [1, 1, 1, 1, 1]
     cfg.MODEL.DEEPLAB.LOSS = "cross_entropy"
     cfg.MODEL.DEEPLAB.NUM_CLASSES = 5
+    cfg.MODEL.DEEPLAB.PRETRAIN = False
 
     # ------------------------------------------------------------------------ #
     # Mesh Head
@@ -76,13 +78,13 @@ def get_sensat_cfg():
     cfg.DATASETS.TRAINSET = "train"
     cfg.DATASETS.VALSET = "val"
     cfg.DATASETS.TESTSET = "test"
-    cfg.DATASETS.SAMPLES = 1000
+    cfg.DATASETS.SAMPLES = [1000]
     cfg.DATASETS.MESHING = ""
     cfg.DATASETS.DEPTH_SCALE = 100
-    cfg.DATASETS.NORMALIZE_IMAGES = True
     cfg.DATASETS.SHUFFLE = True
     cfg.DATASETS.NUM_THREADS = 0
-    cfg.DATASETS.NORMALIZE_DEPTH = True
+    cfg.DATASETS.NORMALIZE_IMAGES = True
+    cfg.DATASETS.NORMALIZE_MESH = True
     
     # ------------------------------------------------------------------------ #
     # Solver

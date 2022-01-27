@@ -1,17 +1,19 @@
 MODEL:
-  BACKBONE: "resnet18"
+  BACKBONE: "resnet34"
   CHECKPOINT: "./checkpoints"
-  CHANNELS: 3
+  CHANNELS: 5
+  SEMANTIC: True
   DEEPLAB:
     LR: 1e-2
     NUM_EPOCHS: 50
     CLASS_WEIGHTED: True
     CLASS_WEIGHT: [0,1,3,1,3]
     LOSS: "focal_loss"
+    PRETRAIN: True
   MESH_HEAD:
     NAME: "VoxMeshHead"
     SEM_PRETRAIN: True
-    MODEL_PATH: "checkpoints/0124_2331_train_mesh1024_depth1000_channel3_focal_loss_50_0.01/model_best_semantic.tar"
+    MODEL_PATH: "checkpoints/0125_1619_deeplab_resnet34_train_mesh1024_depth1000_channel3_focal_loss_50_0.01/model_best_semantic.tar"
     NUM_STAGES: 2
     NUM_GRAPH_CONVS: 3
     GRAPH_CONV_DIM: 64
@@ -34,19 +36,19 @@ DATASETS:
   TRAINSET: "train"
   VALSET: "val"
   TESTSET: "test"
-  SAMPLES: 1000
+  SAMPLES: [1000]
   MESHING: "mesh1024"
   DEPTH_SCALE: 100
   NUM_THREADS: 4
   NORMALIZE_IMAGES: False
   SHUFFLE: True
-  NORMALIZE_DEPTH: False
+  NORMALIZE_MESH: False
 SOLVER:
-  BATCH_SIZE: 2 # 32
-  BATCH_SIZE_EVAL: 2
+  BATCH_SIZE: 4 # 32
+  BATCH_SIZE_EVAL: 4
   NUM_EPOCHS: 200
   BASE_LR: 0.001 # 0.0005
   OPTIMIZER: "adam"
   LR_SCHEDULER_NAME: "constant"
   LOGGING_PERIOD: 50
-  GPU_ID: 0
+  GPU_ID: 1

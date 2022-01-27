@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # - samples: [500,1000,2000,4000]
 # - depth_scale:
 class SensatDataset(Dataset):
-    def __init__(self, data_dir, split=None, meshing=None, samples=None, depth_scale=None, normalized_depth = False, normalize_images=True,):
+    def __init__(self, data_dir, split=None, meshing=None, samples=None, depth_scale=None, normalize_mesh = False, normalize_images=True,):
         transform = [transforms.ToTensor()]
         # do imagenet normalization
         if normalize_images:
@@ -31,7 +31,7 @@ class SensatDataset(Dataset):
         self.meshing = meshing
         self.samples = samples
         self.depth_scale = depth_scale
-        self.normalized_depth = normalized_depth
+        self.normalize_mesh = normalize_mesh
 
         self.rgb_img_ids = []
         self.sparse_depth_ids = []
@@ -50,23 +50,25 @@ class SensatDataset(Dataset):
             seq_idx_list = f.read().splitlines()
         for seq in seq_idx_list:
             for target in sorted(os.listdir(os.path.join(data_dir, seq, "Images"))):
-                target_idx = target[:-4]
-                self.rgb_img_ids.append(os.path.join(
-                    data_dir, seq, "Images", target))
-                self.sparse_depth_ids.append(os.path.join(
-                    data_dir, seq, "Pcds_"+str(samples), target))
-                self.depth_edt_ids.append(os.path.join(
-                    data_dir, seq, "Pcds_"+str(samples), target_idx+"_edt.pt"))
-                self.init_mesh_ids.append(os.path.join(
-                    data_dir, seq, "Pcds_"+str(samples), target_idx+"_"+meshing+".obj"))
-                self.init_mesh_render_depth_ids.append(os.path.join(
-                    data_dir, seq, "Pcds_"+str(samples), target_idx+"_"+meshing+".png"))
-                self.gt_depth_ids.append(os.path.join(
-                    data_dir, seq, "Depths", target))
-                self.gt_mesh_pcd_ids.append(os.path.join(
-                    data_dir, seq, "Meshes", target_idx+"_pcd.pt"))
-                self.sem_img_ids.append(os.path.join(
-                    data_dir, seq, "Semantics_5", target))
+                for sam in samples:
+                    target_idx = target[:-4]
+                    self.rgb_img_ids.append(os.path.join(
+                            data_dir, seq, "Images", target))
+                    self.sparse_depth_ids.append(os.path.join(
+                            data_dir, seq, "Pcds_"+str(sam), target))
+                    self.depth_edt_ids.append(os.path.join(
+                            data_dir, seq, "Pcds_"+str(sam), target_idx+"_edt.pt"))
+                    self.init_mesh_ids.append(os.path.join(
+                            data_dir, seq, "Pcds_"+str(sam), target_idx+"_"+meshing+".obj"))
+                    self.init_mesh_render_depth_ids.append(os.path.join(
+                            data_dir, seq, "Pcds_"+str(sam), target_idx+"_"+meshing+".png"))
+                    self.gt_depth_ids.append(os.path.join(
+                            data_dir, seq, "Depths", target))
+                    self.gt_mesh_pcd_ids.append(os.path.join(
+                            data_dir, seq, "Meshes", target_idx+"_pcd.pt"))
+                    self.sem_img_ids.append(os.path.join(
+                            data_dir, seq, "Semantics_5", target))                        
+
 # Temporary testing            
 #                if len(self.rgb_img_ids) == 660:
 #                    break
@@ -92,10 +94,6 @@ class SensatDataset(Dataset):
         depth_input_scale = 1000
         sparse_depth = np.asfarray(
             imread(sparse_depth_path)/self.depth_scale, dtype=np.float32)/depth_input_scale
-        if self.normalized_depth:
-            depth_available_map = sparse_depth>0
-            num_depth = np.sum(depth_available_map)
-            mean_depth = np.sum(sparse_depth)/num_depth*depth_input_scale
         sparse_depth = transforms.ToTensor()(sparse_depth)
         # TODO: why divide by 20?
         edt_input_scale = 20
@@ -103,28 +101,27 @@ class SensatDataset(Dataset):
         depth_edt = torch.unsqueeze(depth_edt, dim=0)
         init_mesh_v, init_mesh_f, _ = load_obj(
             init_mesh_path, load_textures=False)
-        if self.normalized_depth:
-            init_mesh_v /= mean_depth
+        if self.normalize_mesh:
+            init_mesh_scale = torch.mean(init_mesh_v[:,2])
+            init_mesh_v /= init_mesh_scale
+        else:
+            init_mesh_scale = torch.Tensor(1)
         init_mesh_f = init_mesh_f.verts_idx
         init_mesh_render_depth = np.asfarray(imread(
             init_mesh_render_depth_path)/self.depth_scale, dtype=np.float32)/depth_input_scale
         init_mesh_render_depth = transforms.ToTensor()(init_mesh_render_depth)
         gt_depth = np.asfarray(imread(gt_depth_path) /
                                self.depth_scale, dtype=np.float32)
-        if self.normalized_depth:
-            gt_depth /= mean_depth
         gt_depth = transforms.ToTensor()(gt_depth)
         gt_mesh_pcd = torch.load(gt_mesh_pcd_path)
-        if self.normalized_depth:
-            gt_mesh_pcd /= mean_depth
         sem_img = np.asfarray(imread(sem_img_path), dtype=np.int8)
         sem_img = torch.tensor(sem_img, dtype = torch.long)
-        return rgb_img, sparse_depth, depth_edt, init_mesh_v, init_mesh_f, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img
+        return rgb_img, sparse_depth, depth_edt, init_mesh_v, init_mesh_f, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img
         
     # TODO
     @staticmethod
     def collate_fn(batch):
-        rgb_img, sparse_depth, depth_edt, init_mesh_v, init_mesh_f, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img = zip(
+        rgb_img, sparse_depth, depth_edt, init_mesh_v, init_mesh_f, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img = zip(
             *batch)
         rgb_img = torch.stack(rgb_img, dim=0)
         sparse_depth = torch.stack(sparse_depth, dim=0)
@@ -134,31 +131,33 @@ class SensatDataset(Dataset):
                                faces=list(init_mesh_f),)
         else:
             init_mesh = None
+        init_mesh_scale = torch.stack(init_mesh_scale, dim=0)
         init_mesh_render_depth = torch.stack(init_mesh_render_depth, dim=0)
         gt_depth = torch.stack(gt_depth, dim=0)
         gt_mesh_pcd = torch.stack(gt_mesh_pcd, dim=0)
         sem_img = torch.stack(sem_img, dim=0)
-        return rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img
+        return rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img
 
     def postprocess(self, batch, device=None):
         if device is None:
             device = torch.device("cuda")
-        rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img = batch
+        rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img = batch
         rgb_img = rgb_img.to(device)
         sparse_depth = sparse_depth.to(device)
         depth_edt = depth_edt.to(device)
         if init_mesh is not None:
             init_mesh = init_mesh.to(device)
+        init_mesh_scale = init_mesh_scale.to(device)
         init_mesh_render_depth = init_mesh_render_depth.to(device)
         gt_depth = gt_depth.to(device)
         if gt_mesh_pcd is not None:
             gt_mesh_pcd = gt_mesh_pcd.to(device)
         sem_img = sem_img.to(device)
-        return rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img
+        return rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img
 
 
 class SensatSemanticDataset(Dataset):
-    def __init__(self, data_dir, split=None, meshing=None, samples=None, depth_scale=None, normalized_depth = False, normalize_images=True,):
+    def __init__(self, data_dir, split=None, meshing=None, samples=None, depth_scale=None, normalize_images=True,):
         transform = [transforms.ToTensor()]
         # do imagenet normalization
         if normalize_images:
@@ -172,8 +171,7 @@ class SensatSemanticDataset(Dataset):
         self.meshing = meshing
         self.samples = samples
         self.depth_scale = depth_scale
-        self.normalized_depth = normalized_depth
-
+        
         self.rgb_img_ids = []
         self.sparse_depth_ids = []
         self.depth_edt_ids = []
@@ -188,17 +186,18 @@ class SensatSemanticDataset(Dataset):
             seq_idx_list = f.read().splitlines()
         for seq in seq_idx_list:
             for target in sorted(os.listdir(os.path.join(data_dir, seq, "Images"))):
-                target_idx = target[:-4]
-                self.rgb_img_ids.append(os.path.join(
-                    data_dir, seq, "Images", target))
-                self.sparse_depth_ids.append(os.path.join(
-                    data_dir, seq, "Pcds_"+str(samples), target))
-                self.depth_edt_ids.append(os.path.join(
-                    data_dir, seq, "Pcds_"+str(samples), target_idx+"_edt.pt"))
-                self.init_mesh_render_depth_ids.append(os.path.join(
-                    data_dir, seq, "Pcds_"+str(samples), target_idx+"_"+meshing+".png"))
-                self.sem_img_ids.append(os.path.join(
-                    data_dir, seq, "Semantics_5", target))
+                for sam in samples:
+                    target_idx = target[:-4]
+                    self.rgb_img_ids.append(os.path.join(
+                        data_dir, seq, "Images", target))
+                    self.sparse_depth_ids.append(os.path.join(
+                        data_dir, seq, "Pcds_"+str(sam), target))
+                    self.depth_edt_ids.append(os.path.join(
+                        data_dir, seq, "Pcds_"+str(sam), target_idx+"_edt.pt"))
+                    self.init_mesh_render_depth_ids.append(os.path.join(
+                        data_dir, seq, "Pcds_"+str(sam), target_idx+"_"+meshing+".png"))
+                    self.sem_img_ids.append(os.path.join(
+                        data_dir, seq, "Semantics_5", target))
 # Temporary testing            
 #                if len(self.rgb_img_ids) == 660:
 #                    break
@@ -221,10 +220,6 @@ class SensatSemanticDataset(Dataset):
         depth_input_scale = 1000
         sparse_depth = np.asfarray(
             imread(sparse_depth_path)/self.depth_scale, dtype=np.float32)/depth_input_scale
-        if self.normalized_depth:
-            depth_available_map = sparse_depth>0
-            num_depth = np.sum(depth_available_map)
-            mean_depth = np.sum(sparse_depth)/num_depth*depth_input_scale
         sparse_depth = transforms.ToTensor()(sparse_depth)
         # TODO: why divide by 20?
         edt_input_scale = 20

@@ -55,6 +55,8 @@ if __name__ == "__main__":
         "gt_num_samples": cfg.MODEL.MESH_HEAD.GT_NUM_SAMPLES,
         "pred_num_samples": cfg.MODEL.MESH_HEAD.PRED_NUM_SAMPLES,
         "image_size": cfg.MODEL.MESH_HEAD.IMAGE_SIZE,
+        "focal_length": cfg.MODEL.MESH_HEAD.FOCAL_LENGTH,
+        "semantic": cfg.MODEL.SEMANTIC,
         "device": device
     }
     loss_fn = MeshHybridLoss(**loss_fn_kwargs)
@@ -91,7 +93,7 @@ if __name__ == "__main__":
             for i, batch in tqdm(enumerate(loaders["val"]),total=batch_num_val):
                 batch = loaders["val"].postprocess(batch, device)
                 
-                rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_render_depth, gt_depth, gt_mesh_pcd, gt_semantic = batch 
+                rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, gt_semantic = batch 
                 # Concatenate the inputs
                 if cfg.MODEL.CHANNELS == 3:
                     input_img = rgb_img
@@ -100,7 +102,11 @@ if __name__ == "__main__":
                 elif cfg.MODEL.CHANNELS == 5:
                     input_img = torch.cat((rgb_img,init_mesh_render_depth,depth_edt),dim=1)
                 mesh_pred = model(input_img, init_mesh)
-        
+                # scale the mesh back to calculate loss
+                if cfg.DATASETS.NORMALIZE_MESH:
+                    for m_idx, m in enumerate(mesh_pred):
+                        mesh_pred[m_idx] = m.scale_verts(init_mesh_scale)
+
                 loss, losses = loss_fn(mesh_pred, gt_mesh_pcd, gt_depth, gt_semantic)
                 loss_sum += loss.detach().cpu().numpy()*rgb_img.shape[0]
                 
@@ -110,7 +116,7 @@ if __name__ == "__main__":
                 if cfg.MODEL.MESH_HEAD.DEPTH_LOSS_WEIGHT > 0:
                     for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                         loss_depth_sum[i] += losses["depth_%d"%i].detach().cpu().numpy()*rgb_img.shape[0]
-                if cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
+                if cfg.MODEL.SEMANTIC and cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
                     for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                         loss_semantic_sum[i] += losses["semantic_%d"%i].detach().cpu().numpy()*rgb_img.shape[0]
                 num_count += rgb_img.shape[0]
@@ -136,7 +142,7 @@ if __name__ == "__main__":
                     min_depth_error = loss_depth_sum[cfg.MODEL.MESH_HEAD.NUM_STAGES-1]/num_count
                     min_depth_epoch = epoch
                     shutil.copyfile(save_path+"/model_%d.tar"%(epoch), save_path+"/model_best_depth.tar")            
-            if cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
+            if cfg.MODEL.SEMANTIC and cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
                 for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                     writer.add_scalar("Loss/val/epoch/semantic_%d"%i, loss_semantic_sum[i]/num_count, epoch)                     
                 if loss_semantic_sum[cfg.MODEL.MESH_HEAD.NUM_STAGES-1]/num_count < min_semantic_error:
@@ -154,7 +160,7 @@ if __name__ == "__main__":
         loop = tqdm(enumerate(loaders["train"]),total=batch_num_train)
         for i, batch in loop:
             batch = loaders["train"].postprocess(batch, device)
-            rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_render_depth, gt_depth, gt_mesh_pcd, gt_semantic = batch 
+            rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, gt_semantic = batch 
             # Concatenate the inputs
             if cfg.MODEL.CHANNELS == 3:
                 input_img = rgb_img
@@ -163,7 +169,11 @@ if __name__ == "__main__":
             elif cfg.MODEL.CHANNELS == 5:
                 input_img = torch.cat((rgb_img,init_mesh_render_depth,depth_edt),dim=1)
             mesh_pred = model(input_img, init_mesh)
-    
+            # scale the mesh back to calculate loss
+            if cfg.DATASETS.NORMALIZE_MESH:
+                for m_idx, m in enumerate(mesh_pred):
+                    mesh_pred[m_idx] = m.scale_verts(init_mesh_scale)
+
             loss, losses = loss_fn(mesh_pred, gt_mesh_pcd, gt_depth, gt_semantic)
             if cfg.MODEL.MESH_HEAD.CHAMFER_LOSS_WEIGHT > 0:
                 for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
@@ -173,7 +183,7 @@ if __name__ == "__main__":
                 for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                     writer.add_scalar("Loss/train/batch/depth_%d"%i, losses["depth_%d"%i], epoch*batch_num_train+i)
                     loss_depth_sum[i] += losses["depth_%d"%i].detach().cpu().numpy()*rgb_img.shape[0]
-            if cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
+            if cfg.MODEL.SEMANTIC and cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
                 for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                     writer.add_scalar("Loss/train/batch/semantic_%d"%i, losses["semantic_%d"%i], epoch*batch_num_train+i)
                     loss_semantic_sum[i] += losses["semantic_%d"%i].detach().cpu().numpy()*rgb_img.shape[0]
@@ -192,7 +202,12 @@ if __name__ == "__main__":
         if cfg.MODEL.MESH_HEAD.DEPTH_LOSS_WEIGHT > 0:
             for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                 writer.add_scalar("Loss/train/epoch/depth_%d"%i, loss_depth_sum[i]/num_count, epoch)  
-        if cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
+        if cfg.MODEL.SEMANTIC and cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
             for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                 writer.add_scalar("Loss/train/epoch/semantic_%d"%i, loss_semantic_sum[i]/num_count, epoch)  
         
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            }, save_path+"/model_latest.tar")

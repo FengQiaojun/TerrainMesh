@@ -13,6 +13,7 @@ class MeshRefinementHead(nn.Module):
         super(MeshRefinementHead, self).__init__()
 
         # fmt: off
+        semantic        = cfg.MODEL.SEMANTIC
         input_channels  = cfg.MODEL.MESH_HEAD.COMPUTED_INPUT_CHANNELS
         self.num_stages = cfg.MODEL.MESH_HEAD.NUM_STAGES
         hidden_dim      = cfg.MODEL.MESH_HEAD.GRAPH_CONV_DIM
@@ -26,7 +27,7 @@ class MeshRefinementHead(nn.Module):
         for i in range(self.num_stages):
             vert_feat_dim = 0 if i == 0 else hidden_dim
             stage = MeshRefinementStage(
-                input_channels, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init=graph_conv_init
+                input_channels, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init=graph_conv_init, semantic=semantic
             )
             self.stages.append(stage)
 
@@ -56,7 +57,7 @@ class MeshRefinementHead(nn.Module):
 
 
 class MeshRefinementStage(nn.Module):
-    def __init__(self, img_feat_dim, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init="normal"):
+    def __init__(self, img_feat_dim, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init="normal", semantic=True):
         """
         Args:
           img_feat_dim (int): Dimension of features we will get from vert_align
@@ -70,11 +71,12 @@ class MeshRefinementStage(nn.Module):
 
         self.num_vertices = num_vertices
         self.num_classes = num_classes 
+        self.semantic = semantic
 
         self.bottleneck = nn.Linear(img_feat_dim, hidden_dim)
-
         self.vert_offset = nn.Linear(hidden_dim + 3, 3)
-        self.vert_semantic = nn.Linear(hidden_dim + 3, self.num_classes)
+        if self.semantic:
+            self.vert_semantic = nn.Linear(hidden_dim + 3, self.num_classes)
 
         self.gconvs = nn.ModuleList()
         for i in range(stage_depth):
@@ -132,11 +134,12 @@ class MeshRefinementStage(nn.Module):
         vert_offsets = self.vert_offset(vert_feats)
         meshes_out = meshes.offset_verts(vert_offsets)
         
-        meshes_textures = self.vert_semantic(vert_feats).view(-1, self.num_vertices, self.num_classes)
-        if meshes_out.textures is None:
-            meshes_out.textures = TexturesVertex(verts_features=torch.zeros(meshes_textures.shape, device=device))
-        meshes_out.textures._verts_features_padded = meshes_out.textures.verts_features_padded() + meshes_textures
-        
+        if self.semantic:
+            meshes_textures = self.vert_semantic(vert_feats).view(-1, self.num_vertices, self.num_classes)
+            if meshes_out.textures is None:
+                meshes_out.textures = TexturesVertex(verts_features=torch.zeros(meshes_textures.shape, device=device))
+            meshes_out.textures._verts_features_padded = meshes_out.textures.verts_features_padded() + meshes_textures
+            
         return meshes_out, vert_feats_nopos
 
 

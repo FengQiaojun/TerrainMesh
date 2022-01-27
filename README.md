@@ -1,8 +1,10 @@
 TODO: 
-* A simpler model for segmentation. Using resnet 34 or resnet 18.
-
-
 * Get initial number of chamfer error and depth error.
+* Maybe re-generate the data
+
+* Check why the second stage does not do anything.
+* Tune loss weight parameters. Start with only one or a few test cases to see what's going on.
+
 * Comparison between
     a. First train from scratch on semantic segmentation, then geometry
     b. First train with pretrained weight, then geometry
@@ -15,11 +17,13 @@ This is the export file of a conda environment.
 
 ### Existing models:
 0124_2331_train_mesh1024_depth1000_channel3_focal_loss_50_0.01  
-The model for semantic segmentation initialization. Takes 3 channels as inputs.  
+The resnet50 model for semantic segmentation initialization. Takes 3 channels as inputs.  
 
-0124_1722_train_mesh1024_depth1000_channel4_focal_loss_50_0.01
-The model for semantic segmentation initialization. Takes 4 channels as inputs.    
+0125_1617_deeplab_resnet18_train_mesh1024_depth1000_channel3_focal_loss_50_0.01  
+The resnet18 model for semantic segmentation initialization. Takes 3 channels as inputs.  
 
+0125_1619_deeplab_resnet34_train_mesh1024_depth1000_channel3_focal_loss_50_0.01
+The resnet34 model for semantic segmentation initialization. Takes 3 channels as inputs.  
 
 **train.py**  
 The main training function.  
