@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 import torch
 import torch.nn as nn
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from torch.utils.tensorboard import SummaryWriter
 
 from config import get_sensat_cfg
@@ -26,24 +26,47 @@ if __name__ == "__main__":
     # Load the config and create a folder to save the outputs.
     cfg = get_sensat_cfg()
     cfg.merge_from_file(cfg_file)
-
-    save_path = generate_model_record_name(cfg,prefix="checkpoints")
-    if not os.path.isdir(save_path):
-        os.mkdir(save_path)
-    shutil.copyfile(cfg_file, os.path.join(save_path,cfg_file))
-    writer = SummaryWriter(os.path.join(save_path))
-
+    
     # Specify the GPU
     worker_id = cfg.SOLVER.GPU_ID
     device = torch.device("cuda:%d" % worker_id)
-    
-    # Build the model
-    model = VoxMeshHead(cfg)
-    model.to(device)
-    # Build the optimizer
-    optimizer = build_optimizer(cfg, model)
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.3, patience=2, threshold=1e-3)
 
+    if cfg.MODEL.RESUME:
+        save_path = cfg.MODEL.RESUME_MODEL.replace("/model_latest.tar","")
+        writer = SummaryWriter(save_path)
+        cfg.merge_from_file(os.path.join(save_path,cfg_file))
+        checkpoint = torch.load(cfg.MODEL.RESUME_MODEL)
+        # Build the model
+        model = VoxMeshHead(cfg)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        model.to(device)
+        # Build the optimizer
+        optimizer = build_optimizer(cfg, model)
+        if "optimizer_state_dict" in checkpoint.keys():
+            optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        if cfg.SOLVER.SCHEDULER == "ReduceLROnPlateau":
+            scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.3, patience=2, threshold=1e-3)
+        elif cfg.SOLVER.SCHEDULER == "StepLR":
+            scheduler = StepLR(optimizer, step_size=cfg.SOLVER.SCHEDULER_STEP_SIZE, gamma=cfg.SOLVER.SCHEDULER_GAMMA)
+        if "scheduler_state_dict" in checkpoint.keys():
+            scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+    else:
+        save_path = generate_model_record_name(cfg,prefix="checkpoints")
+        if not os.path.isdir(save_path):
+            os.mkdir(save_path)
+        shutil.copyfile(cfg_file, os.path.join(save_path,cfg_file))
+        writer = SummaryWriter(save_path)
+        
+        # Build the model
+        model = VoxMeshHead(cfg)
+        model.to(device)
+        # Build the optimizer
+        optimizer = build_optimizer(cfg, model)
+        if cfg.SOLVER.SCHEDULER == "ReduceLROnPlateau":
+            scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.3, patience=2, threshold=1e-3)
+        elif cfg.SOLVER.SCHEDULER == "StepLR":
+            scheduler = StepLR(optimizer, step_size=cfg.SOLVER.SCHEDULER_STEP_SIZE, gamma=cfg.SOLVER.SCHEDULER_GAMMA)
+        
     # Build the loss
     loss_fn_kwargs = {
         "chamfer_weight": cfg.MODEL.MESH_HEAD.CHAMFER_LOSS_WEIGHT,
@@ -78,11 +101,10 @@ if __name__ == "__main__":
     min_semantic_epoch = -1
 
     # Start the training epochs
-    for epoch in range(cfg.SOLVER.NUM_EPOCHS):
-    #for epoch in range(10):
-
+    starting_epoch = checkpoint["epoch"]+1 if cfg.MODEL.RESUME else 0
+    for epoch in range(starting_epoch, cfg.SOLVER.NUM_EPOCHS):
+    
         # Validation
-        
         if (epoch)%10 == 0 or epoch+1 == cfg.SOLVER.NUM_EPOCHS:
             num_count = 0
             loss_sum = 0
@@ -121,7 +143,10 @@ if __name__ == "__main__":
                         loss_semantic_sum[i] += losses["semantic_%d"%i].detach().cpu().numpy()*rgb_img.shape[0]
                 num_count += rgb_img.shape[0]
 
-            scheduler.step(loss_sum/num_count)
+            if cfg.SOLVER.SCHEDULER == "ReduceLROnPlateau":
+                scheduler.step(loss_sum/num_count)
+            elif cfg.SOLVER.SCHEDULER == "StepLR":
+                scheduler.step()
 
             torch.save({
                 'epoch': epoch,
@@ -213,4 +238,5 @@ if __name__ == "__main__":
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
+            'scheduler_state_dict': scheduler.state_dict(),
             }, save_path+"/model_latest.tar")

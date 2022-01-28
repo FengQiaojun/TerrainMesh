@@ -2,7 +2,9 @@ MODEL:
   BACKBONE: "resnet18"
   CHECKPOINT: "./checkpoints"
   CHANNELS: 5
-  SEMANTIC: False
+  SEMANTIC: True
+  RESUME: False
+  RESUME_MODEL: "checkpoints/0127_1029_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_3_3_64_1e-06/model_latest.tar"
   DEEPLAB:
     LR: 1e-2
     NUM_EPOCHS: 50
@@ -13,7 +15,7 @@ MODEL:
   MESH_HEAD:
     NAME: "VoxMeshHead"
     SEM_PRETRAIN: True
-    MODEL_PATH: "checkpoints/0125_1617_deeplab_resnet18_train_mesh1024_depth1000_channel3_focal_loss_50_0.01/model_best_semantic.tar"
+    MODEL_PATH: "checkpoints/0125_1617_deeplab_resnet18_train_mesh1024_depth1000_channel3_focal_loss_50_0.01/model_49.tar"
     NUM_STAGES: 3
     NUM_GRAPH_CONVS: 3
     GRAPH_CONV_DIM: 64
@@ -30,6 +32,7 @@ MODEL:
     FOCAL_LENGTH: 2
     IMAGE_SIZE: 512
     NUM_VERTICES: 1024
+    OFFSET_THRESHOLD: 0.1
 DATASETS:
   NAME: "Sensat"
   DATA_DIR: "/mnt/NVMe-2TB/qiaojun/SensatUrban/"
@@ -42,14 +45,15 @@ DATASETS:
   NUM_THREADS: 8
   NORMALIZE_IMAGES: False
   SHUFFLE: True
-  NORMALIZE_MESH: False
+  NORMALIZE_MESH: True
 SOLVER:
   BATCH_SIZE: 16 # 32
   BATCH_SIZE_EVAL: 8
   NUM_EPOCHS: 200
-  BASE_LR: 0.0001 # 0.0005
+  BASE_LR: 2e-6 # 0.0005
   OPTIMIZER: "adam"
+  SCHEDULER: "ReduceLROnPlateau"
   SCHEDULER_STEP_SIZE: 50
   SCHEDULER_GAMMA: 0.1
   LOGGING_PERIOD: 50
-  GPU_ID: 1
+  GPU_ID: 0

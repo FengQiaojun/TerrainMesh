@@ -21,13 +21,14 @@ class MeshRefinementHead(nn.Module):
         graph_conv_init = cfg.MODEL.MESH_HEAD.GRAPH_CONV_INIT
         num_classes     = cfg.MODEL.MESH_HEAD.NUM_CLASSES
         num_vertices    = cfg.MODEL.MESH_HEAD.NUM_VERTICES
+        vert_offset_threshold = cfg.MODEL.MESH_HEAD.OFFSET_THRESHOLD
         # fmt: on
 
         self.stages = nn.ModuleList()
         for i in range(self.num_stages):
             vert_feat_dim = 0 if i == 0 else hidden_dim
             stage = MeshRefinementStage(
-                input_channels, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init=graph_conv_init, semantic=semantic
+                input_channels, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init=graph_conv_init, semantic=semantic, vert_offset_threshold=vert_offset_threshold
             )
             self.stages.append(stage)
 
@@ -57,7 +58,7 @@ class MeshRefinementHead(nn.Module):
 
 
 class MeshRefinementStage(nn.Module):
-    def __init__(self, img_feat_dim, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init="normal", semantic=True):
+    def __init__(self, img_feat_dim, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init="normal", semantic=True, vert_offset_threshold=1):
         """
         Args:
           img_feat_dim (int): Dimension of features we will get from vert_align
@@ -72,6 +73,7 @@ class MeshRefinementStage(nn.Module):
         self.num_vertices = num_vertices
         self.num_classes = num_classes 
         self.semantic = semantic
+        self.vert_offset_threshold = vert_offset_threshold
 
         self.bottleneck = nn.Linear(img_feat_dim, hidden_dim)
         self.vert_offset = nn.Linear(hidden_dim + 3, 3)
@@ -136,6 +138,11 @@ class MeshRefinementStage(nn.Module):
 
         # Predict a new mesh by offsetting verts
         vert_offsets = self.vert_offset(vert_feats)
+        # Avoid nan or inf
+        vert_offsets[torch.where(torch.isnan(vert_offsets))] = 0
+        #vert_offsets[torch.where(torch.isposinf(vert_offsets))] = 0
+        #vert_offsets[torch.where(torch.isneginf(vert_offsets))] = 0
+        vert_offsets[torch.where(vert_offsets>self.vert_offset_threshold)] = self.vert_offset_threshold
         meshes_out = meshes.offset_verts(vert_offsets)
         
         if self.semantic:

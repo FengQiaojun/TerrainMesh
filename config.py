@@ -19,6 +19,12 @@ def get_sensat_cfg():
     # ------------------------------------------------------------------------ #
     # Checkpoint
     # ------------------------------------------------------------------------ #
+    cfg.MODEL.RESUME = False
+    cfg.MODEL.RESUME_MODEL = ""
+
+    # ------------------------------------------------------------------------ #
+    # Checkpoint
+    # ------------------------------------------------------------------------ #
     cfg.MODEL.CHECKPOINT = "./checkpoints"  # path to checkpoint
 
     # ------------------------------------------------------------------------ #
@@ -28,6 +34,7 @@ def get_sensat_cfg():
     cfg.MODEL.DEEPLAB.LR = 0.01
     cfg.MODEL.DEEPLAB.MOMENTUM = 0.9
     cfg.MODEL.DEEPLAB.WEIGHT_DECAY = 1e-4
+    cfg.MODEL.DEEPLAB.SCHEDULER = 50
     cfg.MODEL.DEEPLAB.SCHEDULER_STEP_SIZE = 50
     cfg.MODEL.DEEPLAB.SCHEDULER_GAMMA = 0.3
     cfg.MODEL.DEEPLAB.NUM_EPOCHS = 300
@@ -68,6 +75,8 @@ def get_sensat_cfg():
     # Rendered image size
     cfg.MODEL.MESH_HEAD.IMAGE_SIZE = 512
     cfg.MODEL.MESH_HEAD.NUM_VERTICES = 1024
+    # Deform threshold
+    cfg.MODEL.MESH_HEAD.OFFSET_THRESHOLD = 1.0
 
     # ------------------------------------------------------------------------ #
     # Datasets
@@ -91,6 +100,7 @@ def get_sensat_cfg():
     # Solver
     # ------------------------------------------------------------------------ #
     cfg.SOLVER = CN()
+    cfg.SOLVER.SCHEDULER = "ReduceLROnPlateau" # {'ReduceLROnPlateau','StepLR'}
     cfg.SOLVER.SCHEDULER_STEP_SIZE = 50
     cfg.SOLVER.SCHEDULER_GAMMA = 0.5
     cfg.SOLVER.NUM_EPOCHS = 300
