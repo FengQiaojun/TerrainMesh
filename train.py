@@ -66,7 +66,9 @@ if __name__ == "__main__":
             scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.3, patience=2, threshold=1e-3)
         elif cfg.SOLVER.SCHEDULER == "StepLR":
             scheduler = StepLR(optimizer, step_size=cfg.SOLVER.SCHEDULER_STEP_SIZE, gamma=cfg.SOLVER.SCHEDULER_GAMMA)
-        
+        else:
+            scheduler = StepLR(optimizer, step_size=cfg.SOLVER.SCHEDULER_STEP_SIZE, gamma=cfg.SOLVER.SCHEDULER_GAMMA)
+
     # Build the loss
     loss_fn_kwargs = {
         "chamfer_weight": cfg.MODEL.MESH_HEAD.CHAMFER_LOSS_WEIGHT,

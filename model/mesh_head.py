@@ -13,7 +13,7 @@ class MeshRefinementHead(nn.Module):
         super(MeshRefinementHead, self).__init__()
 
         # fmt: off
-        semantic        = cfg.MODEL.SEMANTIC
+        semantic        = cfg.MODEL.MESH_HEAD.GRAPH_CONV_SEMANTIC
         input_channels  = cfg.MODEL.MESH_HEAD.COMPUTED_INPUT_CHANNELS
         self.num_stages = cfg.MODEL.MESH_HEAD.NUM_STAGES
         hidden_dim      = cfg.MODEL.MESH_HEAD.GRAPH_CONV_DIM

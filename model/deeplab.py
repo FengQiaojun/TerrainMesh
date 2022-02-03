@@ -34,21 +34,21 @@ class DeepLabV3New(nn.Module):
         return result    
 
 def deeplabv3_resnet50(cfg, in_channels=3):
-    model = torch.hub.load('pytorch/vision:v0.8.0', 'deeplabv3_resnet50', pretrained=cfg.MODEL.DEEPLAB.PRETRAIN)
+    model = torch.hub.load('pytorch/vision:v0.8.0', 'deeplabv3_resnet50', pretrained=cfg.MODEL.MESH_HEAD.RESNET_PRETRAIN)
     if cfg.MODEL.CHANNELS != 3:
         model.backbone.conv1 = nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False)
     model.classifier[4] = nn.Conv2d(256, cfg.MODEL.DEEPLAB.NUM_CLASSES, kernel_size=1, stride=1)
     return model
 
 def deeplabv3_resnet34(cfg, in_channels=3):
-    cnn = getattr(torchvision.models, "resnet34")(pretrained=cfg.MODEL.DEEPLAB.PRETRAIN)
+    cnn = getattr(torchvision.models, "resnet34")(pretrained=cfg.MODEL.MESH_HEAD.RESNET_PRETRAIN)
     backbone = ResNetBackbone(cnn, in_channels)
     classifier = DeepLabHeadNew(in_channels=512, out_channels=128, num_classes=cfg.MODEL.DEEPLAB.NUM_CLASSES)   
     model = DeepLabV3New(backbone=backbone,classifier=classifier)
     return model
 
 def deeplabv3_resnet18(cfg, in_channels=3):
-    cnn = getattr(torchvision.models, "resnet18")(pretrained=cfg.MODEL.DEEPLAB.PRETRAIN)
+    cnn = getattr(torchvision.models, "resnet18")(pretrained=cfg.MODEL.MESH_HEAD.RESNET_PRETRAIN)
     backbone = ResNetBackbone(cnn, in_channels)
     classifier = DeepLabHeadNew(in_channels=512, out_channels=128, num_classes=cfg.MODEL.DEEPLAB.NUM_CLASSES)   
     model = DeepLabV3New(backbone=backbone,classifier=classifier)

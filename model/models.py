@@ -23,7 +23,7 @@ class VoxMeshHead(nn.Module):
         self.in_channels = cfg.MODEL.CHANNELS
         self.semantic = cfg.MODEL.SEMANTIC
 
-        if cfg.MODEL.SEMANTIC and cfg.MODEL.MESH_HEAD.SEM_PRETRAIN:
+        if cfg.MODEL.SEMANTIC:
 
             if cfg.MODEL.BACKBONE == "resnet50":
                 self.sem_model = deeplabv3_resnet50(cfg)
@@ -31,27 +31,22 @@ class VoxMeshHead(nn.Module):
                 self.sem_model = deeplabv3_resnet34(cfg)
             elif cfg.MODEL.BACKBONE == "resnet18":
                 self.sem_model = deeplabv3_resnet18(cfg)
-
-            checkpoint = torch.load(cfg.MODEL.MESH_HEAD.MODEL_PATH)
-            model_param_names = list(checkpoint["model_state_dict"].keys())
-            if "module" in model_param_names[0]:
-                new_state_dict = OrderedDict()
-                for k, v in checkpoint["model_state_dict"].items():
-                    name = k.replace("module.", "") # remove `module.`
-                    new_state_dict[name] = v
-                self.sem_model.load_state_dict(new_state_dict)
-            else:
-                self.sem_model.load_state_dict(checkpoint["model_state_dict"])
-            # Change the input channels
-            #if cfg.MODEL.CHANNELS != 3:
-            #    self.sem_model.backbone.conv1 = nn.Conv2d(cfg.MODEL.CHANNELS, 64, kernel_size=7, stride=2, padding=3, bias=False)
-            #    self.sem_model.backbone.stem = nn.Sequential(self.sem_model.backbone.conv1, nn.BatchNorm2d(num_features=64), nn.ReLU(inplace=True), nn.MaxPool2d(kernel_size=3, stride=2, padding=1))
-            # Freeze the classifier part
-            for param in self.sem_model.classifier.parameters():
-                param.requires_grad = False
             
+            if len(cfg.MODEL.MESH_HEAD.SEM_PRETRAIN_MODEL_PATH) > 0:
+                checkpoint = torch.load(cfg.MODEL.MESH_HEAD.SEM_PRETRAIN_MODEL_PATH)
+                model_param_names = list(checkpoint["model_state_dict"].keys())
+                if "module" in model_param_names[0]:
+                    new_state_dict = OrderedDict()
+                    for k, v in checkpoint["model_state_dict"].items():
+                        name = k.replace("module.", "") # remove `module.`
+                        new_state_dict[name] = v
+                    self.sem_model.load_state_dict(new_state_dict)
+                else:
+                    self.sem_model.load_state_dict(checkpoint["model_state_dict"])
+                if cfg.MODEL.MESH_HEAD.FREE_CLASSIFIER:
+                    for param in self.sem_model.classifier.parameters():
+                        param.requires_grad = False 
             self.backbone, feat_dims = build_backbone(cfg.MODEL.BACKBONE,in_channels=cfg.MODEL.CHANNELS,ref_model=self.sem_model.backbone,pretrained=False)
- 
         else:
             self.backbone, feat_dims = build_backbone(cfg.MODEL.BACKBONE,in_channels=cfg.MODEL.CHANNELS,ref_model=None,pretrained=False)
         

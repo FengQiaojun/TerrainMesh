@@ -1,14 +1,24 @@
-TODO: 
-* Get initial number of chamfer error and depth error.
-* Maybe re-generate the data
+Training Lessons:
+* Seems like the package versions matter (PyTorch, PyTorch3D)
+  * PyTorch 1.6.0 + PyTorch3D 0.2.5 (Promising.)
+  * PyTorch 1.6.0 + PyTorch3D 0.3.0 (Promising.)
+  * PyTorch 1.6.0 + PyTorch3D 0.4.0 (Tried very few epochs but seems not working well.)
+  * PyTorch 1.7.1 + PyTorch3D 0.4.0 (Tried most. Not able to train stably.)
+  * PyTorch 1.7.1 + PyTorch3D 0.6.1 (Tried very few epochs but seems not working well.)
 
-* Check why the second stage does not do anything.
+* For Depth Only, Normalized Mesh, 1000 samples  
+  * Learning rate should be 1e-6. 5e-6 will be unstable.
+
+
+
+
+TODO: 
+* Find a way to introduce semantic without sacrificing the geometric performance.
+  Maybe use a separated GNN solely for geometric.
+* Also initialize the feature extractor and classifier modules. Whether we should train them?
+
 * Tune loss weight parameters. Start with only one or a few test cases to see what's going on.
 
-* Comparison between
-    a. First train from scratch on semantic segmentation, then geometry
-    b. First train with pretrained weight, then geometry
-    c. Train all from scratch.
 
 
 terrainmesh.txt:  

@@ -18,7 +18,7 @@ from utils.optimizer import build_optimizer
 from utils.model_record_name import generate_model_record_name
 
 
-cfg_file = "Sensat_basic.yaml"
+cfg_file = "Sensat_predict.yaml"
 
 
 if __name__ == "__main__":
@@ -38,13 +38,31 @@ if __name__ == "__main__":
     worker_id = cfg.SOLVER.GPU_ID
     device = torch.device("cuda:%d" % worker_id)
 
+    # Build the DataLoaders
+    loaders = {}
+    loaders["test"] = build_data_loader(
+        cfg, "Sensat", split_name=cfg.DATASETS.TESTSET, num_workers=cfg.DATASETS.NUM_THREADS)
+    batch_num_test = int(
+        np.ceil(len(loaders["test"].dataset)/loaders["test"].batch_size))
+    print("Test set size %d. Test batch number %d." %
+          (len(loaders["test"].dataset), batch_num_test))
+
+
     # Build the model
-    model = VoxMeshHead(cfg)
-    model.to(device)
-    # Build the optimizer
-    optimizer = build_optimizer(cfg, model)
-    scheduler = ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.3, patience=2, threshold=1e-3)
+    if cfg.MODEL.RESUME:
+        save_model_path = cfg.MODEL.RESUME_MODEL
+        #save_path = cfg.MODEL.RESUME_MODEL.replace("/model_best_depth.tar","")
+        save_path = os.path.join(cfg.MODEL.RESUME_MODEL,"..")
+        cfg.merge_from_file(os.path.join(save_path,"Sensat_basic.yaml"))
+        checkpoint = torch.load(save_model_path)
+        # Build the model
+        model = VoxMeshHead(cfg)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        model.to(device)
+    else:
+        model = VoxMeshHead(cfg)
+        model.to(device)     
+    model.eval()
 
     # Build the loss
     loss_fn_kwargs = {
@@ -62,17 +80,6 @@ if __name__ == "__main__":
         "device": device
     }
     loss_fn = MeshHybridLoss(**loss_fn_kwargs)
-
-    # Build the DataLoaders
-    loaders = {}
-    loaders["test"] = build_data_loader(
-        cfg, "Sensat", split_name=cfg.DATASETS.TESTSET, num_workers=cfg.DATASETS.NUM_THREADS)
-    batch_num_test = int(
-        np.ceil(len(loaders["test"].dataset)/loaders["test"].batch_size))
-    print("Test set size %d. Test batch number %d." %
-          (len(loaders["test"].dataset), batch_num_test))
-
-    model.eval()
 
     num_count = 0
     loss_sum = 0
@@ -92,8 +99,8 @@ if __name__ == "__main__":
         elif cfg.MODEL.CHANNELS == 5:
             input_img = torch.cat(
                     (rgb_img, init_mesh_render_depth, depth_edt), dim=1)
-        #mesh_pred = model(input_img, init_mesh)
-        mesh_pred = [init_mesh]
+        mesh_pred = model(input_img, init_mesh)
+        #mesh_pred = [init_mesh]
         # scale the mesh back to calculate loss
         if cfg.DATASETS.NORMALIZE_MESH:
             for m_idx, m in enumerate(mesh_pred):

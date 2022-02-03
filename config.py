@@ -49,13 +49,15 @@ def get_sensat_cfg():
     # ------------------------------------------------------------------------ #
     cfg.MODEL.MESH_HEAD = CN()
     cfg.MODEL.MESH_HEAD.NAME = "VoxMeshHead"
-    cfg.MODEL.MESH_HEAD.SEM_PRETRAIN = False
-    cfg.MODEL.MESH_HEAD.MODEL_PATH = ""
+    cfg.MODEL.MESH_HEAD.SEM_PRETRAIN_MODEL_PATH = ""
+    cfg.MODEL.MESH_HEAD.RESNET_PRETRAIN = False
     # Numer of stages
     cfg.MODEL.MESH_HEAD.NUM_STAGES = 1
     cfg.MODEL.MESH_HEAD.NUM_GRAPH_CONVS = 1  # per stage
     cfg.MODEL.MESH_HEAD.GRAPH_CONV_DIM = 256
     cfg.MODEL.MESH_HEAD.GRAPH_CONV_INIT = "normal"
+    cfg.MODEL.MESH_HEAD.GRAPH_CONV_SEMANTIC = True
+    cfg.MODEL.MESH_HEAD.FREE_CLASSIFIER = True
     # Mesh sampling
     cfg.MODEL.MESH_HEAD.GT_NUM_SAMPLES = 5000
     cfg.MODEL.MESH_HEAD.PRED_NUM_SAMPLES = 5000
