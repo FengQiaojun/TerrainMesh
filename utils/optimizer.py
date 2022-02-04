@@ -10,3 +10,8 @@ def build_optimizer(cfg, model):
         return torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum)
     elif name == "adam":
         return torch.optim.Adam(model.parameters(), lr=lr, amsgrad=True)
+
+#optim.SGD([
+#                {'params': model.base.parameters()},
+#                {'params': model.classifier.parameters(), 'lr': 1e-3}
+#            ], lr=1e-2, momentum=0.9)

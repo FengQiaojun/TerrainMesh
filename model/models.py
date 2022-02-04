@@ -43,7 +43,7 @@ class VoxMeshHead(nn.Module):
                     self.sem_model.load_state_dict(new_state_dict)
                 else:
                     self.sem_model.load_state_dict(checkpoint["model_state_dict"])
-                if cfg.MODEL.MESH_HEAD.FREE_CLASSIFIER:
+                if cfg.MODEL.MESH_HEAD.FREEZE_CLASSIFIER:
                     for param in self.sem_model.classifier.parameters():
                         param.requires_grad = False 
             self.backbone, feat_dims = build_backbone(cfg.MODEL.BACKBONE,in_channels=cfg.MODEL.CHANNELS,ref_model=self.sem_model.backbone,pretrained=False)
@@ -80,4 +80,5 @@ class VoxMeshHead(nn.Module):
             init_meshes.textures = TexturesVertex(verts_features=vert_align_feats)
 
         refined_meshes = self.mesh_head(img_feats, init_meshes, P)
+
         return refined_meshes

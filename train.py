@@ -45,7 +45,7 @@ if __name__ == "__main__":
         if "optimizer_state_dict" in checkpoint.keys():
             optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         if cfg.SOLVER.SCHEDULER == "ReduceLROnPlateau":
-            scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.3, patience=2, threshold=1e-3)
+            scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.3, patience=1, threshold=1e-3)
         elif cfg.SOLVER.SCHEDULER == "StepLR":
             scheduler = StepLR(optimizer, step_size=cfg.SOLVER.SCHEDULER_STEP_SIZE, gamma=cfg.SOLVER.SCHEDULER_GAMMA)
         if "scheduler_state_dict" in checkpoint.keys():
@@ -146,7 +146,7 @@ if __name__ == "__main__":
                 num_count += rgb_img.shape[0]
 
             if cfg.SOLVER.SCHEDULER == "ReduceLROnPlateau":
-                scheduler.step(loss_sum/num_count)
+                scheduler.step(loss_depth_sum[cfg.MODEL.MESH_HEAD.NUM_STAGES-1]/num_count)
             elif cfg.SOLVER.SCHEDULER == "StepLR":
                 scheduler.step()
 

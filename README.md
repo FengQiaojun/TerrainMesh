@@ -6,8 +6,6 @@ Training Lessons:
   * PyTorch 1.7.1 + PyTorch3D 0.4.0 (Tried most. Not able to train stably.)
   * PyTorch 1.7.1 + PyTorch3D 0.6.1 (Tried very few epochs but seems not working well.)
 
-* For Depth Only, Normalized Mesh, 1000 samples  
-  * Learning rate should be 1e-6. 5e-6 will be unstable.
 
 
 
@@ -34,6 +32,14 @@ The resnet18 model for semantic segmentation initialization. Takes 3 channels as
 
 0125_1619_deeplab_resnet34_train_mesh1024_depth1000_channel3_focal_loss_50_0.01
 The resnet34 model for semantic segmentation initialization. Takes 3 channels as inputs.  
+
+0202_1359_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_3_3_64_0.0005
+
+0202_1517_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel4_3_3_64_0.0005
+
+0202_2330_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel3_3_3_64_0.0005
+
+
 
 **train.py**  
 The main training function.  
