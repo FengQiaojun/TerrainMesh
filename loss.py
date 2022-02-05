@@ -101,6 +101,12 @@ class MeshHybridLoss(nn.Module):
             shader = TextureShader(device=device)
         )
 
+    def set_semantic_weight(self, semantic_weight):
+        self.semantic_weight = semantic_weight
+
+    def get_semantic_weight(self):
+        return self.semantic_weight
+
 
     def forward(self, meshes_pred, meshes_gt, gt_depth, gt_semantic):
         

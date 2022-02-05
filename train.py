@@ -85,11 +85,12 @@ if __name__ == "__main__":
         "device": device
     }
     loss_fn = MeshHybridLoss(**loss_fn_kwargs)
+    loss_fn.set_semantic_weight(0)
 
     # Build the DataLoaders 
     loaders = {}
-    loaders["train"] = build_data_loader(cfg, "Sensat", split_name=cfg.DATASETS.TRAINSET, num_workers=cfg.DATASETS.NUM_THREADS)
-    loaders["val"] = build_data_loader(cfg, "Sensat", split_name=cfg.DATASETS.VALSET, num_workers=cfg.DATASETS.NUM_THREADS)
+    loaders["train"] = build_data_loader(cfg, "Sensat", split_name=cfg.DATASETS.TRAINSET, num_workers=cfg.DATASETS.NUM_THREADS, shuffle=cfg.DATASETS.SHUFFLE)
+    loaders["val"] = build_data_loader(cfg, "Sensat", split_name=cfg.DATASETS.VALSET, num_workers=cfg.DATASETS.NUM_THREADS, shuffle=cfg.DATASETS.SHUFFLE)
     batch_num_train = int(np.ceil(len(loaders["train"].dataset)/loaders["train"].batch_size))
     batch_num_val = int(np.ceil(len(loaders["val"].dataset)/loaders["val"].batch_size))
     print("Training set size %d. Training batch number %d."%(len(loaders["train"].dataset),batch_num_train))
@@ -106,6 +107,10 @@ if __name__ == "__main__":
     starting_epoch = checkpoint["epoch"]+1 if cfg.MODEL.RESUME else 0
     for epoch in range(starting_epoch, cfg.SOLVER.NUM_EPOCHS):
     
+        if epoch == cfg.SOLVER.SEM_START_EPOCH:
+            loss_fn.set_semantic_weight(cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT)
+            print("Switch to semantic mode at epoch ",epoch)
+
         # Validation
         if (epoch)%10 == 0 or epoch+1 == cfg.SOLVER.NUM_EPOCHS:
             num_count = 0
@@ -140,7 +145,7 @@ if __name__ == "__main__":
                 if cfg.MODEL.MESH_HEAD.DEPTH_LOSS_WEIGHT > 0:
                     for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                         loss_depth_sum[i] += losses["depth_%d"%i].detach().cpu().numpy()*rgb_img.shape[0]
-                if cfg.MODEL.SEMANTIC and cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
+                if cfg.MODEL.SEMANTIC and loss_fn.get_semantic_weight() > 0:
                     for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                         loss_semantic_sum[i] += losses["semantic_%d"%i].detach().cpu().numpy()*rgb_img.shape[0]
                 num_count += rgb_img.shape[0]
@@ -172,7 +177,7 @@ if __name__ == "__main__":
                     min_depth_error = loss_depth_sum[cfg.MODEL.MESH_HEAD.NUM_STAGES-1]/num_count
                     min_depth_epoch = epoch
                     shutil.copyfile(save_path+"/model_%d.tar"%(epoch), save_path+"/model_best_depth.tar")            
-            if cfg.MODEL.SEMANTIC and cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
+            if cfg.MODEL.SEMANTIC and loss_fn.get_semantic_weight() > 0:
                 for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                     writer.add_scalar("Loss/val/epoch/semantic_%d"%i, loss_semantic_sum[i]/num_count, epoch)                     
                 if loss_semantic_sum[cfg.MODEL.MESH_HEAD.NUM_STAGES-1]/num_count < min_semantic_error:
@@ -213,7 +218,7 @@ if __name__ == "__main__":
                 for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                     writer.add_scalar("Loss/train/batch/depth_%d"%i, losses["depth_%d"%i], epoch*batch_num_train+i)
                     loss_depth_sum[i] += losses["depth_%d"%i].detach().cpu().numpy()*rgb_img.shape[0]
-            if cfg.MODEL.SEMANTIC and cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
+            if cfg.MODEL.SEMANTIC and loss_fn.get_semantic_weight() > 0:
                 for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                     writer.add_scalar("Loss/train/batch/semantic_%d"%i, losses["semantic_%d"%i], epoch*batch_num_train+i)
                     loss_semantic_sum[i] += losses["semantic_%d"%i].detach().cpu().numpy()*rgb_img.shape[0]
@@ -232,7 +237,7 @@ if __name__ == "__main__":
         if cfg.MODEL.MESH_HEAD.DEPTH_LOSS_WEIGHT > 0:
             for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                 writer.add_scalar("Loss/train/epoch/depth_%d"%i, loss_depth_sum[i]/num_count, epoch)  
-        if cfg.MODEL.SEMANTIC and cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
+        if cfg.MODEL.SEMANTIC and loss_fn.get_semantic_weight() > 0:
             for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                 writer.add_scalar("Loss/train/epoch/semantic_%d"%i, loss_semantic_sum[i]/num_count, epoch)  
         

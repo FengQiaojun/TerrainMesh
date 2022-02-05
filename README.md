@@ -8,8 +8,6 @@ Training Lessons:
 
 
 
-
-
 TODO: 
 * Find a way to introduce semantic without sacrificing the geometric performance.
   Maybe use a separated GNN solely for geometric.
