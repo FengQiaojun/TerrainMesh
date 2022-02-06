@@ -2,9 +2,9 @@ MODEL:
   BACKBONE: "resnet18"
   CHECKPOINT: "./checkpoints"
   CHANNELS: 5
-  SEMANTIC: True
+  SEMANTIC: False
   RESUME: False
-  RESUME_MODEL: "checkpoints/0127_1029_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_3_3_64_1e-06/model_latest.tar"
+  RESUME_MODEL: ""
   DEEPLAB:
     LR: 1e-2
     NUM_EPOCHS: 50
@@ -20,8 +20,6 @@ MODEL:
     NUM_GRAPH_CONVS: 3
     GRAPH_CONV_DIM: 64
     GRAPH_CONV_INIT: "normal"
-    GRAPH_CONV_SEMANTIC: False
-    FREE_CLASSIFIER: False
     GT_NUM_SAMPLES: 10000
     PRED_NUM_SAMPLES: 10000
     CHAMFER_LOSS_WEIGHT: 1.0
@@ -51,7 +49,7 @@ DATASETS:
 SOLVER:
   BATCH_SIZE: 8 # 32
   BATCH_SIZE_EVAL: 8
-  NUM_EPOCHS: 100
+  NUM_EPOCHS: 200
   BASE_LR: 5e-4 # 0.0005
   OPTIMIZER: "adam"
   SCHEDULER: ""
