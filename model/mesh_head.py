@@ -78,8 +78,7 @@ class MeshRefinementStage(nn.Module):
         self.bottleneck = nn.Linear(img_feat_dim, hidden_dim)
         self.vert_offset = nn.Linear(hidden_dim + 3, 3)
         if self.semantic:
-            self.vert_offset = nn.Linear(hidden_dim + 3 + self.num_classes, 3)
-            self.vert_semantic = nn.Linear(hidden_dim + 3 + self.num_classes, self.num_classes)
+            self.vert_semantic = nn.Linear(hidden_dim + 3, self.num_classes)
 
         self.gconvs = nn.ModuleList()
         for i in range(stage_depth):
@@ -87,9 +86,6 @@ class MeshRefinementStage(nn.Module):
                 input_dim = hidden_dim + vert_feat_dim + 3
             else:
                 input_dim = hidden_dim + 3
-            # Add extra dimension
-            if self.semantic:
-                input_dim += self.num_classes
             gconv = GraphConv(input_dim, hidden_dim, init=gconv_init, directed=False)
             self.gconvs.append(gconv)
 
@@ -130,10 +126,7 @@ class MeshRefinementStage(nn.Module):
         vert_align_feats = F.relu(self.bottleneck(vert_align_feats))
 
         # Prepare features for first graph conv layer
-        if self.semantic:
-            first_layer_feats = [vert_align_feats, vert_pos_packed, meshes.textures.verts_features_packed()]
-        else:
-            first_layer_feats = [vert_align_feats, vert_pos_packed]
+        first_layer_feats = [vert_align_feats, vert_pos_packed]
         if vert_feats is not None:
             first_layer_feats.append(vert_feats)
         vert_feats = torch.cat(first_layer_feats, dim=1)
@@ -141,10 +134,7 @@ class MeshRefinementStage(nn.Module):
         # Run graph conv layers
         for gconv in self.gconvs:
             vert_feats_nopos = F.relu(gconv(vert_feats, meshes.edges_packed()))
-            if self.semantic:
-                vert_feats = torch.cat([vert_feats_nopos, vert_pos_packed, meshes.textures.verts_features_packed()], dim=1)
-            else:
-                vert_feats = torch.cat([vert_feats_nopos, vert_pos_packed], dim=1)
+            vert_feats = torch.cat([vert_feats_nopos, vert_pos_packed], dim=1)
 
         # Predict a new mesh by offsetting verts
         vert_offsets = self.vert_offset(vert_feats)

@@ -18,7 +18,7 @@ from utils.model_record_name import generate_model_record_name
 
 
 
-cfg_file = "Sensat_basic.yaml"
+cfg_file = "Sensat_classifier.yaml"
 
 
 
@@ -32,16 +32,21 @@ if __name__ == "__main__":
     device = torch.device("cuda:%d" % worker_id)
 
     if cfg.MODEL.RESUME:
-        save_path = os.path.join(cfg.MODEL.RESUME_MODEL,"..")
-        writer = SummaryWriter(save_path)
-        cfg.merge_from_file(os.path.join(save_path,cfg_file))
+        origin_path = os.path.join(cfg.MODEL.RESUME_MODEL,"..")
         checkpoint = torch.load(cfg.MODEL.RESUME_MODEL)
+        save_path = generate_model_record_name(cfg,prefix="checkpoints")
+        writer = SummaryWriter(save_path)
+        cfg.merge_from_file(os.path.join(origin_path,"Sensat_basic.yaml"))
         # Build the model
+        cfg.MODEL.SEMANTIC = True
         model = VoxMeshHead(cfg)
+        print(model)
         model.load_state_dict(checkpoint["model_state_dict"])
         model.to(device)
         # Build the optimizer
-        optimizer = build_optimizer(cfg, model)
+        #optimizer = build_optimizer(cfg, model)
+        optimizer = torch.optim.Adam(model.sem_model.classifier.parameters(), lr=cfg.SOLVER.BASE_LR, amsgrad=True)
+
         if "optimizer_state_dict" in checkpoint.keys():
             optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         if cfg.SOLVER.SCHEDULER == "ReduceLROnPlateau":
