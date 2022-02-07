@@ -86,7 +86,8 @@ if __name__ == "__main__":
         "device": device
     }
     loss_fn = MeshHybridLoss(**loss_fn_kwargs)
-
+    loss_fn.set_semantic_weight(0)
+    
     # Build the DataLoaders 
     loaders = {}
     loaders["train"] = build_data_loader(cfg, "Sensat", split_name=cfg.DATASETS.TRAINSET, num_workers=cfg.DATASETS.NUM_THREADS)
@@ -107,6 +108,11 @@ if __name__ == "__main__":
     starting_epoch = checkpoint["epoch"]+1 if cfg.MODEL.RESUME else 0
     for epoch in range(starting_epoch, cfg.SOLVER.NUM_EPOCHS):
     
+        
+        if epoch == cfg.SOLVER.SEM_START_EPOCH:
+            loss_fn.set_semantic_weight(cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT)
+            print("Switch to semantic mode at epoch ",epoch)
+
         # Validation
         if (epoch)%10 == 0 or epoch+1 == cfg.SOLVER.NUM_EPOCHS:
             num_count = 0
@@ -240,7 +246,7 @@ if __name__ == "__main__":
                     loss_semantic_sum[i] += losses["semantic_%d"%i].detach().cpu().numpy()*rgb_img.shape[0]
             if cfg.MODEL.SEMANTIC and cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
                 writer.add_scalar("Loss/train/batch/semantic_img", losses["semantic"], epoch*batch_num_train+i)
-                loss_2d_semantic += losses["semantic"]
+                loss_2d_semantic += losses["semantic"].detach().cpu().numpy()*rgb_img.shape[0]
 
             optimizer.zero_grad()
             loss.backward()

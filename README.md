@@ -1,23 +1,33 @@
 Training Lessons:
+
+* Semantic segmentation
+  * Together from scratch
+    * (Not working) Semantic only 2D classifier, no graph conv, no mesh rendering.
+  * First geometry (50 epochs), then semantic.
+    * Semantic only 2D classifier, no graph conv, no mesh rendering.
+
 * Seems like the package versions matter (PyTorch, PyTorch3D)
   * PyTorch 1.6.0 + PyTorch3D 0.2.5 (Promising.)
-  * PyTorch 1.6.0 + PyTorch3D 0.3.0 (Promising.)
+  * GO with this. PyTorch 1.6.0 + PyTorch3D 0.3.0 (Promising.)
   * PyTorch 1.6.0 + PyTorch3D 0.4.0 (Tried very few epochs but seems not working well.)
   * PyTorch 1.7.1 + PyTorch3D 0.4.0 (Tried most. Not able to train stably.)
   * PyTorch 1.7.1 + PyTorch3D 0.6.1 (Tried very few epochs but seems not working well.)
 
-* For Depth Only, Normalized Mesh, 1000 samples  
-  * Learning rate should be 1e-6. 5e-6 will be unstable.
+0206_1642_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_3_3_64_0.0005  
+Geometry training, 100 epochs. Add semantic feature channel but zero. 5 channels.  
 
+0206_1756_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel3_3_3_64_0.0005  
+Geometry training, 100 epochs. Add semantic feature channel but zero. 3 channels.  
 
+0206_2150_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_channel5_3_3_64_0.0005  
+Geometry + Semantic training, 50 geo + 50 sem epochs. Add semantic feature channel. Train classifier. No graph conv. 
 
+0207_0817_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_channel5_3_3_64_0.0005  
+Geometry + Semantic training, 100 geo + 100 sem epochs. Add semantic feature channel. Train classifier. No graph conv.  
 
-TODO: 
-* Find a way to introduce semantic without sacrificing the geometric performance.
-  Maybe use a separated GNN solely for geometric.
-* Also initialize the feature extractor and classifier modules. Whether we should train them?
+0207_0855_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_channel5_3_3_64_0.0005  
+Geometry training, 100 epochs. Add semantic feature channel but zero.  
 
-* Tune loss weight parameters. Start with only one or a few test cases to see what's going on.
 
 
 
@@ -34,6 +44,12 @@ The resnet18 model for semantic segmentation initialization. Takes 3 channels as
 
 0125_1619_deeplab_resnet34_train_mesh1024_depth1000_channel3_focal_loss_50_0.01
 The resnet34 model for semantic segmentation initialization. Takes 3 channels as inputs.  
+
+0202_1359_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_3_3_64_0.0005
+
+0202_1517_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel4_3_3_64_0.0005
+
+
 
 **train.py**  
 The main training function.  
