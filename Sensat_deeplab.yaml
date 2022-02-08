@@ -1,36 +1,42 @@
 MODEL:
   BACKBONE: "resnet18"
   CHECKPOINT: "./checkpoints"
-  CHANNELS: 5
-  SEMANTIC: False
+  CHANNELS: 3
+  SEMANTIC: True
+  RESUME: True
+  #RESUME_MODEL: "checkpoints_others/deeplab/0124_2331_train_mesh1024_depth1000_channel3_focal_loss_50_0.01/model_best_semantic.tar"
+  RESUME_MODEL: "checkpoints_others/deeplab/0125_1617_deeplab_resnet18_train_mesh1024_depth1000_channel3_focal_loss_50_0.01/model_best_semantic.tar"
   DEEPLAB:
     LR: 1e-2
     NUM_EPOCHS: 50
     CLASS_WEIGHTED: True
     CLASS_WEIGHT: [0,1,3,1,3]
-    LOSS: "focal_loss"
+    LOSS: "cross_entropy"
     PRETRAIN: True
   MESH_HEAD:
     NAME: "VoxMeshHead"
-    SEM_PRETRAIN: True
-    MODEL_PATH: "checkpoints/0125_1617_deeplab_resnet18_train_mesh1024_depth1000_channel3_focal_loss_50_0.01/model_best_semantic.tar"
+    RESNET_PRETRAIN: True
+    SEM_PRETRAIN_MODEL_PATH: ""
     NUM_STAGES: 3
     NUM_GRAPH_CONVS: 3
     GRAPH_CONV_DIM: 64
     GRAPH_CONV_INIT: "normal"
+    GRAPH_CONV_SEMANTIC: False
+    GRAPH_CONV_DIM_SEMANTIC: True
+    FREEZE_CLASSIFIER: False
     GT_NUM_SAMPLES: 10000
     PRED_NUM_SAMPLES: 10000
     CHAMFER_LOSS_WEIGHT: 1.0
     NORMALS_LOSS_WEIGHT: 0.0
     EDGE_LOSS_WEIGHT: 0.01
     LAPLACIAN_LOSS_WEIGHT: 0.5
-    DEPTH_LOSS_WEIGHT: 3.0
-    SEMANTIC_LOSS_WEIGHT: 0.5
+    DEPTH_LOSS_WEIGHT: 10.0
+    SEMANTIC_LOSS_WEIGHT: 1.0
     NUM_CLASSES: 5
     FOCAL_LENGTH: 2
     IMAGE_SIZE: 512
     NUM_VERTICES: 1024
-    OFFSET_THRESHOLD: 0.1
+    OFFSET_THRESHOLD: 0.5
 DATASETS:
   NAME: "Sensat"
   DATA_DIR: "/mnt/NVMe-2TB/qiaojun/SensatUrban/"
@@ -41,17 +47,18 @@ DATASETS:
   MESHING: "mesh1024"
   DEPTH_SCALE: 100
   NUM_THREADS: 8
-  NORMALIZE_IMAGES: False
+  NORMALIZE_IMAGES: True
   SHUFFLE: True
   NORMALIZE_MESH: True
-  SIZE: 1320
 SOLVER:
-  BATCH_SIZE: 16 # 32
+  BATCH_SIZE: 8 # 32
   BATCH_SIZE_EVAL: 8
-  NUM_EPOCHS: 200
-  BASE_LR: 1e-7 # 0.0005
+  NUM_EPOCHS: 100
+  SEM_START_EPOCH: 100
+  BASE_LR: 5e-4 # 0.0005
   OPTIMIZER: "adam"
+  SCHEDULER: ""
   SCHEDULER_STEP_SIZE: 50
   SCHEDULER_GAMMA: 0.1
   LOGGING_PERIOD: 50
-  GPU_ID: 0
+  GPU_ID: 1

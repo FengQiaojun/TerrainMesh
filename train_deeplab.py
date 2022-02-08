@@ -16,7 +16,7 @@ from model.deeplab import deeplabv3_resnet18, deeplabv3_resnet34, deeplabv3_resn
 from utils.model_record_name import generate_segmodel_record_name
 from utils.stream_metrics import StreamSegMetrics
 
-cfg_file = "Sensat_basic.yaml"
+cfg_file = "Sensat_deeplab.yaml"
 
 if __name__ == "__main__":
     # Load the config and create a folder to save the outputs.
