@@ -58,6 +58,11 @@ class MeshRefinementHead(nn.Module):
             #    meshes, vert_feats = subdivide(meshes, feats=vert_feats)
         return output_meshes
 
+    def set_semantic(self, semantic):
+        for i, stage in enumerate(self.stages):
+            stage.set_semantic(semantic)
+
+
 
 class MeshRefinementStage(nn.Module):
     def __init__(self, img_feat_dim, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init="normal", semantic=True, dim_semantic=False, vert_offset_threshold=1):
@@ -79,14 +84,14 @@ class MeshRefinementStage(nn.Module):
         self.vert_offset_threshold = vert_offset_threshold
 
         self.bottleneck = nn.Linear(img_feat_dim, hidden_dim)
-        #self.bottleneck_semantic = nn.Linear(img_feat_dim, hidden_dim)
+        self.bottleneck_semantic = nn.Linear(img_feat_dim, hidden_dim)
         
         if self.dim_semantic:
             self.vert_offset = nn.Linear(hidden_dim + 3 + self.num_classes, 3)
-            #self.vert_semantic = nn.Linear(hidden_dim + 3 + self.num_classes, self.num_classes)
+            self.vert_semantic = nn.Linear(hidden_dim + 3 + self.num_classes, self.num_classes)
         else:
             self.vert_offset = nn.Linear(hidden_dim + 3, 3)
-            #self.vert_semantic = nn.Linear(hidden_dim + 3, self.num_classes)
+            self.vert_semantic = nn.Linear(hidden_dim + 3, self.num_classes)
 
         self.gconvs = nn.ModuleList()
         for i in range(stage_depth):
@@ -103,7 +108,6 @@ class MeshRefinementStage(nn.Module):
             gconv = GraphConv(input_dim, hidden_dim, init=gconv_init, directed=False)
             self.gconvs.append(gconv)
 
-        '''
         self.gconvs_sem = nn.ModuleList()
         for i in range(1):
             if self.dim_semantic:
@@ -112,7 +116,7 @@ class MeshRefinementStage(nn.Module):
                 input_dim = hidden_dim + vert_feat_dim + 3
             gconv = GraphConv(input_dim, hidden_dim, init=gconv_init, directed=False)
             self.gconvs_sem.append(gconv)
-        '''
+        
 
         # initialization for bottleneck and vert_offset
         nn.init.normal_(self.bottleneck.weight, mean=0.0, std=0.01)
@@ -121,11 +125,11 @@ class MeshRefinementStage(nn.Module):
         nn.init.zeros_(self.vert_offset.weight)
         nn.init.constant_(self.vert_offset.bias, 0)
 
-        #nn.init.normal_(self.bottleneck_semantic.weight, mean=0.0, std=0.01)
-        #nn.init.constant_(self.bottleneck_semantic.bias, 0)
+        nn.init.normal_(self.bottleneck_semantic.weight, mean=0.0, std=0.01)
+        nn.init.constant_(self.bottleneck_semantic.bias, 0)
 
-        #nn.init.zeros_(self.vert_semantic.weight)
-        #nn.init.constant_(self.vert_semantic.bias, 0)
+        nn.init.zeros_(self.vert_semantic.weight)
+        nn.init.constant_(self.vert_semantic.bias, 0)
 
     def forward(self, img_feats, meshes, vert_feats=None, vert_sem_feats=None, P=None):
         """
@@ -141,7 +145,8 @@ class MeshRefinementStage(nn.Module):
 
         if P is not None:
             vert_pos_padded = project_verts(meshes.verts_padded(), P)
-            vert_pos_packed = _padded_to_packed(vert_pos_padded, verts_padded_to_packed_idx)
+            #vert_pos_packed = _padded_to_packed(vert_pos_padded, verts_padded_to_packed_idx)
+            vert_pos_packed = _padded_to_packed(meshes.verts_padded(), verts_padded_to_packed_idx)
         else:
             vert_pos_padded = meshes.verts_padded()
             vert_pos_packed = meshes.verts_packed()
@@ -200,6 +205,9 @@ class MeshRefinementStage(nn.Module):
             vert_sem_feats_nopos = None
 
         return meshes_out, vert_feats_nopos, vert_sem_feats_nopos
+
+    def set_semantic(self, semantic):
+        self.semantic = semantic
 
 
 def _padded_to_packed(x, idx):

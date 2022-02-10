@@ -49,7 +49,6 @@ class VoxMeshHead(nn.Module):
         P = self._get_projection_matrix(N, device)
 
         # init mesh vertex semantic features
-        #pred_semantic = self.sem_model(imgs[:,0:3,:,:])["out"] 
         if self.semantic:
             vert_pos_padded = project_verts(init_meshes.verts_padded(), P)
             vert_align_feats = vert_align(sem_2d, vert_pos_padded)
@@ -60,3 +59,6 @@ class VoxMeshHead(nn.Module):
         refined_meshes = self.mesh_head(img_feats, init_meshes, P)
         
         return refined_meshes
+
+    def set_semantic(self, semantic):
+        self.mesh_head.set_semantic(semantic)
