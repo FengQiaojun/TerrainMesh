@@ -1,21 +1,20 @@
 MODEL:
-  BACKBONE: "resnet50"
+  BACKBONE: "resnet18"
   CHECKPOINT: "./checkpoints"
-  CHANNELS: 3
+  CHANNELS: 5
   SEMANTIC: True
-  RESUME: True
-  #RESUME_MODEL: "checkpoints_others/deeplab/0124_2331_train_mesh1024_depth1000_channel3_focal_loss_50_0.01/model_best_semantic.tar"
-  RESUME_MODEL: "checkpoints_others/deeplab/0208_2052_deeplab_resnet50_train_mesh1024_depth[1000]_channel3_cross_entropy_50_0.01/model_best_semantic.tar"
+  RESUME: False
+  RESUME_MODEL: ""
   DEEPLAB:
     LR: 1e-2
     NUM_EPOCHS: 50
     CLASS_WEIGHTED: True
-    CLASS_WEIGHT: [0,1,2,3,3]
-    LOSS: "cross_entropy"
+    CLASS_WEIGHT: [0,1,3,1,3]
+    LOSS: "focal_loss"
     PRETRAIN: True
   MESH_HEAD:
     NAME: "VoxMeshHead"
-    RESNET_PRETRAIN: True
+    RESNET_PRETRAIN: False
     SEM_PRETRAIN_MODEL_PATH: ""
     NUM_STAGES: 3
     NUM_GRAPH_CONVS: 3
@@ -46,17 +45,17 @@ DATASETS:
   MESHING: "mesh1024"
   DEPTH_SCALE: 100
   NUM_THREADS: 8
-  NORMALIZE_IMAGES: True
+  NORMALIZE_IMAGES: False
   SHUFFLE: True
   NORMALIZE_MESH: True
 SOLVER:
-  BATCH_SIZE: 4 # 32
-  BATCH_SIZE_EVAL: 4
+  BATCH_SIZE: 8 # 32
+  BATCH_SIZE_EVAL: 8
   NUM_EPOCHS: 100
-  SEM_START_EPOCH: 100
+  SEM_START_EPOCH: 50
   BASE_LR: 5e-4 # 0.0005
   OPTIMIZER: "adam"
-  SCHEDULER: ""
+  SCHEDULER: "StepLR"
   SCHEDULER_STEP_SIZE: 50
   SCHEDULER_GAMMA: 0.1
   LOGGING_PERIOD: 5

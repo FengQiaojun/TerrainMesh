@@ -25,13 +25,13 @@ if __name__ == "__main__":
     cfg = get_sensat_cfg()
     cfg.merge_from_file(cfg_file)
 
-    writer = SummaryWriter(os.path.join(save_path))
-
+    
     # Specify the GPU. Here use 2 of them.
     worker_id = cfg.SOLVER.GPU_ID
     device = torch.device("cuda:%d" % worker_id if torch.cuda.is_available() else 'cpu')
     
     # Build the model
+    '''
     if cfg.MODEL.BACKBONE == "resnet50":
         model = deeplabv3_resnet50(cfg)
     elif cfg.MODEL.BACKBONE == "resnet34":
@@ -39,7 +39,11 @@ if __name__ == "__main__":
     elif cfg.MODEL.BACKBONE == "resnet18":
         model = deeplabv3_resnet18(cfg)
     #model = nn.DataParallel(model)
+    '''
+    model = torch.hub.load('pytorch/vision:v0.8.0', 'deeplabv3_resnet50', pretrained=True)
+    model.classifier[4] = nn.Conv2d(256, cfg.MODEL.DEEPLAB.NUM_CLASSES, kernel_size=1, stride=1)
     model.to(device)
+    
     
     if cfg.MODEL.RESUME:
         save_model_path = cfg.MODEL.RESUME_MODEL
@@ -81,8 +85,8 @@ if __name__ == "__main__":
     metrics.reset()
 
     with torch.no_grad():
-        for i, batch in tqdm(enumerate(loaders["train"]),total=batch_num_train):
-        #for i, batch in tqdm(enumerate(loaders["val"]),total=batch_num_val):
+        #for i, batch in tqdm(enumerate(loaders["train"]),total=batch_num_train):
+        for i, batch in tqdm(enumerate(loaders["val"]),total=batch_num_val):
         #for i, batch in tqdm(enumerate(loaders["test"]),total=batch_num_test):
                     
             rgb_img, sparse_depth, depth_edt, init_mesh_render_depth, gt_semantic = batch 
@@ -102,7 +106,10 @@ if __name__ == "__main__":
             loss = loss_fn(pred_semantic, gt_semantic)
             loss_sum += loss.detach().cpu().numpy()*rgb_img.shape[0]
             num_count += rgb_img.shape[0]
-                    
+
+            #print(pred_semantic[0,:,200,200])
+            #print(gt_semantic[0,200,200])
+                        
             preds = pred_semantic.detach().max(dim=1)[1].cpu().numpy()
             metrics.update(preds, gt_semantic.cpu().numpy())
             

@@ -71,7 +71,7 @@ cur_itrs = 0
 cur_epochs = 0
 print("[!] Retrain")
 
-checkpoint = torch.load("checkpoints/0615/naive_100.pth", map_location=torch.device('cpu'))
+checkpoint = torch.load("checkpoints_others/0615/naive_100.pth", map_location=torch.device('cpu'))
 model.load_state_dict(checkpoint["model_state"])
 
 #model = nn.DataParallel(model)
@@ -88,9 +88,9 @@ while cur_epochs < total_epochs:
     for i, batch in tqdm(enumerate(train_loader),total=batch_num_train):
         batch = train_loader.postprocess(batch, device)
         print("after batch")
-        rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img = batch
+        rgb_img, sparse_depth, depth_edt, sem_2d_pred, init_mesh, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, gt_semantic = batch
         images = rgb_img
-        labels = sem_img
+        labels = gt_semantic
         cur_itrs += 1
 
         images = images.to(device, dtype=torch.float32)
@@ -127,9 +127,11 @@ while cur_epochs < total_epochs:
         print(mesh_img.shape)
         img_predict = mesh_img
         img_predict = img_predict.detach().cpu().numpy()[0,:,:]
-        img_predict = np.argmax(img_predict,axis=-1)
         print(img_predict.shape)
-        img_label = labels.detach().cpu().numpy()[0,0,:,:] 
+        print(img_predict[200,200,:])
+        img_predict = np.argmax(img_predict,axis=-1)
+        img_label = labels.detach().cpu().numpy()[0,:,:] 
+        '''
         plt.subplot(131)
         plt.imshow(img_label)
         plt.subplot(132)
@@ -141,7 +143,7 @@ while cur_epochs < total_epochs:
         Image.fromarray(convert_class_to_rgb_sensat_full(img_label)).save('%d_gt.png'%cur_itrs)
         Image.fromarray(convert_class_to_rgb_sensat_full(img_predict_2d)).save('%d_2d.png'%cur_itrs)
         Image.fromarray(convert_class_to_rgb_sensat_full(img_predict)).save('%d_mesh1024_label.png'%cur_itrs)
-
+        '''
         '''
         img_rgb = denormalize(images.detach().cpu(),mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225]).numpy()[0,:,:,:].transpose((1,2,0))
         img_label = labels.detach().cpu().numpy()[0,:,:]

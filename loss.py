@@ -161,7 +161,7 @@ class MeshHybridLoss(nn.Module):
                 total_loss = total_loss + self.laplacian_weight * laplacian_loss
                 losses["laplacian_%d"%i] = laplacian_loss
             # Semantic Segmentation weight
-            if (self.semantic and self.graph_conv_semantic and self.semantic_weight > 0):
+            if (self.semantic and self.semantic_weight > 0):
                 semantic_predict = self.renderer_semantic(cur_meshes_pred).permute(0,3,1,2)
                 criterion = nn.CrossEntropyLoss(ignore_index=0, reduction='mean')
                 semantic_loss = criterion(semantic_predict, gt_semantic)

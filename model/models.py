@@ -26,34 +26,8 @@ class VoxMeshHead(nn.Module):
         self.num_vertices = cfg.MODEL.MESH_HEAD.NUM_VERTICES 
         self.num_classes = cfg.MODEL.MESH_HEAD.NUM_CLASSES
 
-        if cfg.MODEL.SEMANTIC:
-
-            if cfg.MODEL.BACKBONE == "resnet50":
-                self.sem_model = deeplabv3_resnet50(cfg)
-            elif cfg.MODEL.BACKBONE == "resnet34":
-                self.sem_model = deeplabv3_resnet34(cfg)
-            elif cfg.MODEL.BACKBONE == "resnet18":
-                self.sem_model = deeplabv3_resnet18(cfg)
-            
-            if len(cfg.MODEL.MESH_HEAD.SEM_PRETRAIN_MODEL_PATH) > 0:
-                checkpoint = torch.load(cfg.MODEL.MESH_HEAD.SEM_PRETRAIN_MODEL_PATH)
-                model_param_names = list(checkpoint["model_state_dict"].keys())
-                if "module" in model_param_names[0]:
-                    new_state_dict = OrderedDict()
-                    for k, v in checkpoint["model_state_dict"].items():
-                        name = k.replace("module.", "") # remove `module.`
-                        new_state_dict[name] = v
-                    self.sem_model.load_state_dict(new_state_dict)
-                else:
-                    self.sem_model.load_state_dict(checkpoint["model_state_dict"])
-                if cfg.MODEL.MESH_HEAD.FREEZE_CLASSIFIER:
-                    for param in self.sem_model.classifier.parameters():
-                        param.requires_grad = False 
-            self.backbone, feat_dims = build_backbone(cfg.MODEL.BACKBONE,in_channels=cfg.MODEL.CHANNELS,ref_model=self.sem_model.backbone,pretrained=False)
-        else:
-            self.backbone, feat_dims = build_backbone(cfg.MODEL.BACKBONE,in_channels=cfg.MODEL.CHANNELS,ref_model=None,pretrained=False)
+        self.backbone, feat_dims = build_backbone(cfg.MODEL.BACKBONE,in_channels=cfg.MODEL.CHANNELS,ref_model=None,pretrained=False)
         
-
         cfg.MODEL.MESH_HEAD.COMPUTED_INPUT_CHANNELS = sum(feat_dims)
         self.mesh_head = MeshRefinementHead(cfg)
         focal_length = cfg.MODEL.MESH_HEAD.FOCAL_LENGTH
@@ -68,7 +42,7 @@ class VoxMeshHead(nn.Module):
     def _get_projection_matrix(self, N, device):
         return self.K[None].repeat(N, 1, 1).to(device).detach()
 
-    def forward(self, imgs, init_meshes):
+    def forward(self, imgs, init_meshes, sem_2d):
         N = imgs.shape[0]
         device = imgs.device
         img_feats = self.backbone(imgs)
@@ -77,16 +51,12 @@ class VoxMeshHead(nn.Module):
         # init mesh vertex semantic features
         #pred_semantic = self.sem_model(imgs[:,0:3,:,:])["out"] 
         if self.semantic:
-            pred_semantic = self.sem_model(imgs[:,0:3,:,:])
             vert_pos_padded = project_verts(init_meshes.verts_padded(), P)
-            vert_align_feats = vert_align(pred_semantic, vert_pos_padded)
+            vert_align_feats = vert_align(sem_2d, vert_pos_padded)
             init_meshes.textures = TexturesVertex(verts_features=vert_align_feats)
         else:
             init_meshes.textures = TexturesVertex(verts_features=torch.zeros((N, self.num_vertices, self.num_classes), device=device))
         
         refined_meshes = self.mesh_head(img_feats, init_meshes, P)
         
-        if self.semantic:
-            return refined_meshes, pred_semantic
-        else:
-            return refined_meshes
+        return refined_meshes

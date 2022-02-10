@@ -49,12 +49,13 @@ class MeshRefinementHead(nn.Module):
         """
         output_meshes = []
         vert_feats = None
+        vert_sem_feats = None
         for i, stage in enumerate(self.stages):
-            meshes, vert_feats = stage(img_feats, meshes, vert_feats, P)
+            meshes, vert_feats, vert_sem_feats = stage(img_feats, meshes, vert_feats, vert_sem_feats, P)
             output_meshes.append(meshes)
-            if subdivide and i < self.num_stages - 1:
-                subdivide = SubdivideMeshes()
-                meshes, vert_feats = subdivide(meshes, feats=vert_feats)
+            #if subdivide and i < self.num_stages - 1:
+            #    subdivide = SubdivideMeshes()
+            #    meshes, vert_feats = subdivide(meshes, feats=vert_feats)
         return output_meshes
 
 
@@ -78,17 +79,14 @@ class MeshRefinementStage(nn.Module):
         self.vert_offset_threshold = vert_offset_threshold
 
         self.bottleneck = nn.Linear(img_feat_dim, hidden_dim)
-        if self.semantic:
-            self.bottleneck_semantic = nn.Linear(img_feat_dim, hidden_dim)
+        #self.bottleneck_semantic = nn.Linear(img_feat_dim, hidden_dim)
         
         if self.dim_semantic:
             self.vert_offset = nn.Linear(hidden_dim + 3 + self.num_classes, 3)
-            if self.semantic:
-                self.vert_semantic = nn.Linear(hidden_dim + 3 + self.num_classes, self.num_classes)
+            #self.vert_semantic = nn.Linear(hidden_dim + 3 + self.num_classes, self.num_classes)
         else:
             self.vert_offset = nn.Linear(hidden_dim + 3, 3)
-            if self.semantic:
-                self.vert_semantic = nn.Linear(hidden_dim + 3, self.num_classes)
+            #self.vert_semantic = nn.Linear(hidden_dim + 3, self.num_classes)
 
         self.gconvs = nn.ModuleList()
         for i in range(stage_depth):
@@ -105,6 +103,17 @@ class MeshRefinementStage(nn.Module):
             gconv = GraphConv(input_dim, hidden_dim, init=gconv_init, directed=False)
             self.gconvs.append(gconv)
 
+        '''
+        self.gconvs_sem = nn.ModuleList()
+        for i in range(1):
+            if self.dim_semantic:
+                input_dim = hidden_dim + vert_feat_dim + 3 + self.num_classes
+            else:
+                input_dim = hidden_dim + vert_feat_dim + 3
+            gconv = GraphConv(input_dim, hidden_dim, init=gconv_init, directed=False)
+            self.gconvs_sem.append(gconv)
+        '''
+
         # initialization for bottleneck and vert_offset
         nn.init.normal_(self.bottleneck.weight, mean=0.0, std=0.01)
         nn.init.constant_(self.bottleneck.bias, 0)
@@ -112,14 +121,13 @@ class MeshRefinementStage(nn.Module):
         nn.init.zeros_(self.vert_offset.weight)
         nn.init.constant_(self.vert_offset.bias, 0)
 
-        if self.semantic:
-            nn.init.normal_(self.bottleneck_semantic.weight, mean=0.0, std=0.01)
-            nn.init.constant_(self.bottleneck_semantic.bias, 0)
+        #nn.init.normal_(self.bottleneck_semantic.weight, mean=0.0, std=0.01)
+        #nn.init.constant_(self.bottleneck_semantic.bias, 0)
 
-            nn.init.zeros_(self.vert_semantic.weight)
-            nn.init.constant_(self.vert_semantic.bias, 0)
+        #nn.init.zeros_(self.vert_semantic.weight)
+        #nn.init.constant_(self.vert_semantic.bias, 0)
 
-    def forward(self, img_feats, meshes, vert_feats=None, P=None):
+    def forward(self, img_feats, meshes, vert_feats=None, vert_sem_feats=None, P=None):
         """
         Args:
           img_feats (tensor): Features from the backbone
@@ -152,7 +160,7 @@ class MeshRefinementStage(nn.Module):
         if vert_feats is not None:
             first_layer_feats.append(vert_feats)
         vert_feats = torch.cat(first_layer_feats, dim=1)
-
+        
         # Run graph conv layers
         for gconv in self.gconvs:
             vert_feats_nopos = F.relu(gconv(vert_feats, meshes.edges_packed()))
@@ -163,40 +171,35 @@ class MeshRefinementStage(nn.Module):
 
         # Predict a new mesh by offsetting verts
         vert_offsets = self.vert_offset(vert_feats)
-        # Avoid nan or inf
+        # Avoid nan
         vert_offsets[torch.where(torch.isnan(vert_offsets))] = 0
-        #vert_offsets[torch.where(torch.isposinf(vert_offsets))] = 0
-        #vert_offsets[torch.where(torch.isneginf(vert_offsets))] = 0
         vert_offsets[torch.where(vert_offsets>self.vert_offset_threshold)] = self.vert_offset_threshold
         meshes_out = meshes.offset_verts(vert_offsets)
         
         if self.semantic:
-            
             vert_align_feats_semantic = F.relu(self.bottleneck_semantic(vert_align_feats_project))
-
             # Prepare features for first graph conv layer
             if self.dim_semantic:
                 first_layer_feats = [vert_align_feats_semantic, vert_pos_packed, meshes.textures.verts_features_packed()]
             else:
                 first_layer_feats = [vert_align_feats_semantic, vert_pos_packed]
-            if vert_feats is not None:
-                first_layer_feats.append(vert_feats)
+            if vert_sem_feats is not None:
+                first_layer_feats.append(vert_sem_feats)
             vert_feats_semantic = torch.cat(first_layer_feats, dim=1)
-
             # Run graph conv layers
-            for gconv in self.gconvs:
-                vert_feats_nopos = F.relu(gconv(vert_feats_semantic, meshes.edges_packed()))
+            for gconv in self.gconvs_sem:
+                vert_sem_feats_nopos = F.relu(gconv(vert_feats_semantic, meshes.edges_packed()))
                 if self.dim_semantic:
-                    vert_feats_semantic = torch.cat([vert_feats_nopos, vert_pos_packed, meshes.textures.verts_features_packed()], dim=1)
+                    vert_feats_semantic = torch.cat([vert_sem_feats_nopos, vert_pos_packed, meshes.textures.verts_features_packed()], dim=1)
                 else:
-                    vert_feats_semantic = torch.cat([vert_feats_nopos, vert_pos_packed], dim=1)
-
+                    vert_feats_semantic = torch.cat([vert_sem_feats_nopos, vert_pos_packed], dim=1)
             meshes_textures = self.vert_semantic(vert_feats_semantic).view(-1, self.num_vertices, self.num_classes)
-
             #meshes_out.textures._verts_features_padded = meshes_out.textures.verts_features_padded() + meshes_textures
-            meshes_out.textures = TexturesVertex(verts_features=meshes_textures)
+            meshes_out.textures = TexturesVertex(verts_features=meshes_out.textures.verts_features_padded()+meshes_textures)
+        else:
+            vert_sem_feats_nopos = None
 
-        return meshes_out, vert_feats_nopos
+        return meshes_out, vert_feats_nopos, vert_sem_feats_nopos
 
 
 def _padded_to_packed(x, idx):
