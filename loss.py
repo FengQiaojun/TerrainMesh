@@ -79,6 +79,7 @@ class MeshHybridLoss(nn.Module):
         self.pred_num_samples = pred_num_samples
         self.semantic = semantic
         self.graph_conv_semantic = graph_conv_semantic
+        self.device = device
         R = torch.eye(3).reshape((1,3,3))
         R = R.to(device)
         T = torch.zeros(1,3)
@@ -166,7 +167,8 @@ class MeshHybridLoss(nn.Module):
             # Semantic Segmentation weight
             if (gt_semantic is not None and self.semantic_weight > 0):
                 semantic_predict = self.renderer_semantic(cur_meshes_pred).permute(0,3,1,2)
-                criterion = nn.CrossEntropyLoss(ignore_index=0, reduction='mean')
+                #criterion = nn.CrossEntropyLoss(ignore_index=0, reduction='mean')
+                criterion = FocalLoss(weight = torch.Tensor([0,1,3,3,1]).to(self.device), ignore_index=0, size_average=True)
                 semantic_loss = criterion(semantic_predict, gt_semantic)
                 total_loss = total_loss + self.semantic_weight * semantic_loss
                 losses["semantic_%d"%i] = semantic_loss
