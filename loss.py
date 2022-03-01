@@ -89,6 +89,7 @@ class MeshHybridLoss(nn.Module):
             image_size=self.image_size, 
             blur_radius=0.0001, 
             faces_per_pixel=1, 
+            perspective_correct=False, # this seems solve the nan error
         )
         # Define the renderer
         self.renderer_depth = MeshRendererWithDepth(
@@ -111,7 +112,7 @@ class MeshHybridLoss(nn.Module):
     def get_semantic_weight(self):
         return self.semantic_weight
 
-    def forward(self, meshes_pred, sem_2d_pred, meshes_gt, gt_depth, gt_semantic):
+    def forward(self, meshes_pred, sem_2d_pred, meshes_gt, gt_depth, gt_semantic, return_img=False):
         
         total_loss = torch.tensor(0.0)
         losses = {}
@@ -127,7 +128,7 @@ class MeshHybridLoss(nn.Module):
 
         for i, cur_meshes_pred in enumerate(meshes_pred):
             # 3D loss (Chamfer)
-            if (self.chamfer_weight > 0):
+            if (points_gt is not None and self.chamfer_weight > 0):
                 points_pred, normals_pred = sample_points_from_meshes(
                     cur_meshes_pred, num_samples=self.pred_num_samples, return_normals=True
                 )
@@ -145,7 +146,7 @@ class MeshHybridLoss(nn.Module):
                 losses["chamfer_%d"%i] = cham_loss
                 losses["normal_%d"%i] = normal_loss
             # 2D loss (render)
-            if (self.depth_weight > 0):
+            if (gt_depth is not None and self.depth_weight > 0):
                 depth = self.renderer_depth(cur_meshes_pred)
                 depth = depth.permute(0,3,1,2)
                 depth_available_map = (depth>0)*(gt_depth>0)
@@ -163,7 +164,7 @@ class MeshHybridLoss(nn.Module):
                 total_loss = total_loss + self.laplacian_weight * laplacian_loss
                 losses["laplacian_%d"%i] = laplacian_loss
             # Semantic Segmentation weight
-            if self.semantic_weight > 0:
+            if (gt_semantic is not None and self.semantic_weight > 0):
                 semantic_predict = self.renderer_semantic(cur_meshes_pred).permute(0,3,1,2)
                 criterion = nn.CrossEntropyLoss(ignore_index=0, reduction='mean')
                 semantic_loss = criterion(semantic_predict, gt_semantic)
@@ -176,7 +177,15 @@ class MeshHybridLoss(nn.Module):
             total_loss = total_loss + self.semantic_weight * semantic_2d_loss
             losses["semantic"] = semantic_2d_loss
 
-        return total_loss, losses
+        if return_img:
+            img_list = []
+            if (gt_depth is not None and self.depth_weight > 0):
+                img_list.append(depth)
+            if (gt_semantic is not None and self.semantic_weight > 0):
+                img_list.append(semantic_predict)
+            return total_loss, losses, img_list
+        else:
+            return total_loss, losses
 
 
 class FocalLoss(nn.Module):

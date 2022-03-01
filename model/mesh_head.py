@@ -182,6 +182,7 @@ class MeshRefinementStage(nn.Module):
         meshes_out = meshes.offset_verts(vert_offsets)
         
         if self.semantic:
+            
             vert_align_feats_semantic = F.relu(self.bottleneck_semantic(vert_align_feats_project))
             # Prepare features for first graph conv layer
             if self.dim_semantic:
@@ -201,6 +202,11 @@ class MeshRefinementStage(nn.Module):
             meshes_textures = self.vert_semantic(vert_feats_semantic).view(-1, self.num_vertices, self.num_classes)
             #meshes_out.textures._verts_features_padded = meshes_out.textures.verts_features_padded() + meshes_textures
             meshes_out.textures = TexturesVertex(verts_features=meshes_out.textures.verts_features_padded()+meshes_textures)
+            '''
+            meshes_textures = self.vert_semantic(vert_feats).view(-1, self.num_vertices, self.num_classes)
+            meshes_out.textures = TexturesVertex(verts_features=meshes_out.textures.verts_features_padded()+meshes_textures)
+            vert_sem_feats_nopos = None
+            '''
         else:
             vert_sem_feats_nopos = None
 

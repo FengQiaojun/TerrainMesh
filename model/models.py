@@ -42,7 +42,7 @@ class VoxMeshHead(nn.Module):
     def _get_projection_matrix(self, N, device):
         return self.K[None].repeat(N, 1, 1).to(device).detach()
 
-    def forward(self, imgs, init_meshes, sem_2d):
+    def forward(self, imgs, init_meshes, sem_2d, return_init=False):
         N = imgs.shape[0]
         device = imgs.device
         img_feats = self.backbone(imgs)
@@ -58,7 +58,10 @@ class VoxMeshHead(nn.Module):
         
         refined_meshes = self.mesh_head(img_feats, init_meshes, P)
         
-        return refined_meshes
+        if return_init:
+            return refined_meshes, init_meshes
+        else:
+            return refined_meshes
 
     def set_semantic(self, semantic):
         self.mesh_head.set_semantic(semantic)
