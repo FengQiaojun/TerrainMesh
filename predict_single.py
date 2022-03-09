@@ -25,8 +25,8 @@ from utils.stream_metrics import StreamSegMetrics
 
 cfg_file = "Sensat_predict.yaml"
 seq_idx = "cambridge_10"
-img_idx_list = [186]
-
+img_idx_list = [494]
+save_folder = "visualizations/journal/temp/"
 
 if __name__ == "__main__":
     # Load the config and create a folder to save the outputs.
@@ -100,12 +100,20 @@ if __name__ == "__main__":
             input_img = torch.cat(
                     (rgb_img, init_mesh_render_depth, depth_edt), dim=1)
         mesh_pred, init_mesh = model(input_img, init_mesh, sem_2d_pred, return_init=True)
+        
         #mesh_pred = [init_mesh]
         # scale the mesh back to calculate loss
         if cfg.DATASETS.NORMALIZE_MESH:
             init_mesh = init_mesh.scale_verts(init_mesh_scale)
             for m_idx, m in enumerate(mesh_pred):
                 mesh_pred[m_idx] = m.scale_verts(init_mesh_scale)
+
+        
+        img_gt = convert_class_to_rgb_sensat_simplified(gt_semantic.detach().cpu().numpy()[0,::])
+        imwrite(save_folder+seq_idx+"_"+img_idx+"_"+"gt_sem.png",img_gt)
+        img_2d = convert_class_to_rgb_sensat_simplified(sem_2d_pred.detach().max(dim=1)[1].cpu().numpy()[0,::])
+        imwrite(save_folder+seq_idx+"_"+img_idx+"_"+"2D_sem.png",img_2d)
+
 
         loss, losses, img_predict = loss_fn(
                 init_mesh, None, gt_mesh_pcd, gt_depth, gt_semantic, return_img=True)
@@ -115,10 +123,12 @@ if __name__ == "__main__":
         
         img_semantic = img_predict[1].detach().max(dim=1)[1].cpu().numpy()[0,::]
         img_semantic = convert_class_to_rgb_sensat_simplified(img_semantic)
-        imwrite("visualizations/"+seq_idx+"_"+img_idx+"_"+"init_sem.png",img_semantic)
+        imwrite(save_folder+seq_idx+"_"+img_idx+"_"+"init_sem.png",img_semantic)
+        img_depth = img_predict[0].detach().cpu().numpy()[0,0,::]*100
+        imwrite(save_folder+seq_idx+"_"+img_idx+"_"+"init_depth.png",img_depth.astype(np.uint16))
         final_verts, final_faces = init_mesh.get_mesh_verts_faces(0)
         final_obj = seq_idx+"_"+img_idx+"_"+"init.obj"
-        save_obj("visualizations/"+final_obj, final_verts, final_faces)
+        save_obj(save_folder+final_obj, final_verts, final_faces)
 
         metrics.reset()
         metrics.update(img_predict[1].detach().max(dim=1)[1].cpu().numpy(), gt_semantic.cpu().numpy())
@@ -137,10 +147,12 @@ if __name__ == "__main__":
         
         img_semantic = img_predict[1].detach().max(dim=1)[1].cpu().numpy()[0,::]
         img_semantic = convert_class_to_rgb_sensat_simplified(img_semantic)
-        imwrite("visualizations/"+seq_idx+"_"+img_idx+"_"+"refine_sem.png",img_semantic)
+        imwrite(save_folder+seq_idx+"_"+img_idx+"_"+"refine_sem.png",img_semantic)
+        img_depth = img_predict[0].detach().cpu().numpy()[0,0,::]*100
+        imwrite(save_folder+seq_idx+"_"+img_idx+"_"+"refine_depth.png",img_depth.astype(np.uint16))
         final_verts, final_faces = mesh_pred[0].get_mesh_verts_faces(0)
         final_obj = seq_idx+"_"+img_idx+"_"+"refine.obj"
-        save_obj("visualizations/"+final_obj, final_verts, final_faces)
+        save_obj(save_folder+final_obj, final_verts, final_faces)
 
         metrics.reset()
         metrics.update(img_predict[1].detach().max(dim=1)[1].cpu().numpy(), gt_semantic.cpu().numpy())
@@ -151,8 +163,9 @@ if __name__ == "__main__":
         print("Class IoU",score['Class IoU'])        
 
 
+        '''
         new_mesh = mesh_sem_opt(mesh_pred[0], sem_2d_pred, lr=1e-2, iters=30)
-        #new_mesh = mesh_sem_opt_(mesh_pred[0], sem_2d_pred, gt_mesh_pcd, gt_depth, gt_semantic, lr=1e-2, iters=50)
+        #new_mesh = mesh_sem_opt_(mesh_pred[0], sem_2d_pred, gt_mesh_pcd, gt_depth, gt_semantic, lr=1e-2, iters=100)
         loss, losses, img_predict = loss_fn(
                 new_mesh, None, gt_mesh_pcd, gt_depth, gt_semantic, return_img=True)
         print("loss_chamfer[0]",losses["chamfer_0"])
@@ -161,10 +174,12 @@ if __name__ == "__main__":
         
         img_semantic = img_predict[1].detach().max(dim=1)[1].cpu().numpy()[0,::]
         img_semantic = convert_class_to_rgb_sensat_simplified(img_semantic)
-        imwrite("visualizations/"+seq_idx+"_"+img_idx+"_"+"sem_refine_sem.png",img_semantic)
+        imwrite(save_folder+seq_idx+"_"+img_idx+"_"+"sem_refine_sem.png",img_semantic)
+        img_depth = img_predict[0].detach().cpu().numpy()[0,0,::]*100
+        imwrite(save_folder+seq_idx+"_"+img_idx+"_"+"sem_refine_depth.png",img_depth.astype(np.uint16))
         final_verts, final_faces = new_mesh.get_mesh_verts_faces(0)
         final_obj = seq_idx+"_"+img_idx+"_"+"sem_refine.obj"
-        save_obj("visualizations/"+final_obj, final_verts, final_faces)
+        save_obj(save_folder+final_obj, final_verts, final_faces)
 
         metrics.reset()
         metrics.update(img_predict[1].detach().max(dim=1)[1].cpu().numpy(), gt_semantic.cpu().numpy())
@@ -189,12 +204,13 @@ if __name__ == "__main__":
 
         
         gt_display = gt_depth.cpu().numpy()[0,0,:,:]
-        pred_display = init_mesh_render_depth.cpu().numpy()[0,0,:,:]*1000
+        pred_display = init_mesh_render_depth.cpu().numpy()[0,0,:,:]
         depth_available_map = (gt_display>0)*(pred_display>0)
         loss_sum += loss.detach().cpu().numpy()*rgb_img.shape[0]
         num_count += rgb_img.shape[0]
+        '''
 
-
+    '''
     if cfg.MODEL.MESH_HEAD.CHAMFER_LOSS_WEIGHT > 0:
         for i in range(len(mesh_pred)):
             print("loss_chamfer_sum[%d]"%i, loss_chamfer_sum[i]/num_count)
@@ -204,4 +220,4 @@ if __name__ == "__main__":
     if cfg.MODEL.SEMANTIC and cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
         for i in range(len(mesh_pred)):
             print("loss_semantic_sum[%d]"%i, loss_semantic_sum[i]/num_count)
-    
+    '''

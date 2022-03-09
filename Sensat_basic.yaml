@@ -3,7 +3,7 @@ MODEL:
   CHECKPOINT: "./checkpoints"
   CHANNELS: 5
   SEMANTIC: True
-  RESUME: True
+  RESUME: False
   RESUME_MODEL: "checkpoints/0212_0959_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_1_3_32_0.0005/model_30.tar"
   DEEPLAB:
     LR: 1e-2
@@ -16,7 +16,8 @@ MODEL:
     NAME: "VoxMeshHead"
     RESNET_PRETRAIN: False
     SEM_PRETRAIN_MODEL_PATH: ""
-    NUM_STAGES: 1
+    NUM_STAGES: 2
+    STAGE_LIST: ["geo","hybrid"]
     NUM_GRAPH_CONVS: 3
     GRAPH_CONV_DIM: 32
     GRAPH_CONV_INIT: "normal"

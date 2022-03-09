@@ -56,8 +56,9 @@ class VoxMeshHead(nn.Module):
         else:
             init_meshes.textures = TexturesVertex(verts_features=torch.zeros((N, self.num_vertices, self.num_classes), device=device))
         
-        refined_meshes = self.mesh_head(img_feats, init_meshes, P)
+        refined_meshes = self.mesh_head(img_feats, init_meshes, sem_2d, P)
         
+
         if return_init:
             return refined_meshes, init_meshes
         else:

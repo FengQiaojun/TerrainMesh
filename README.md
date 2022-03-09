@@ -1,6 +1,10 @@
 ### TODO
-* Retrain from same place
-* Optimization w.r.t. 2D prediction.
+* Write/Verify the IoU metric
+* Rewrite the MeshRefinementStage to include 
+  * Only Geometric
+  * Only Semantic
+  * Joint Geometric & Semantic
+  These different stages.
 
 ### Existing models:
 

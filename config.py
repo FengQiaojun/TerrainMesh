@@ -53,6 +53,7 @@ def get_sensat_cfg():
     cfg.MODEL.MESH_HEAD.RESNET_PRETRAIN = False
     # Numer of stages
     cfg.MODEL.MESH_HEAD.NUM_STAGES = 1
+    cfg.MODEL.MESH_HEAD.STAGE_LIST = []
     cfg.MODEL.MESH_HEAD.NUM_GRAPH_CONVS = 1  # per stage
     cfg.MODEL.MESH_HEAD.GRAPH_CONV_DIM = 256
     cfg.MODEL.MESH_HEAD.GRAPH_CONV_DIM_SEMANTIC = False
