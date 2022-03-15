@@ -69,6 +69,8 @@ def get_sensat_cfg():
     cfg.MODEL.MESH_HEAD.LAPLACIAN_LOSS_WEIGHT = 1.0
     cfg.MODEL.MESH_HEAD.DEPTH_LOSS_WEIGHT = 1.0
     cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT = 1.0
+    # semantic loss function
+    cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_FUNC = ""
     # Init ico_sphere level (only for when voxel_on is false)
     cfg.MODEL.MESH_HEAD.ICO_SPHERE_LEVEL = -1
     # Mesh semantic label
@@ -80,6 +82,8 @@ def get_sensat_cfg():
     cfg.MODEL.MESH_HEAD.NUM_VERTICES = 1024
     # Deform threshold
     cfg.MODEL.MESH_HEAD.OFFSET_THRESHOLD = 1.0
+    # Semantic Residual
+    cfg.MODEL.MESH_HEAD.SEMANTIC_RESIDUAL = True
 
     # ------------------------------------------------------------------------ #
     # Datasets
@@ -97,6 +101,7 @@ def get_sensat_cfg():
     cfg.DATASETS.NUM_THREADS = 0
     cfg.DATASETS.NORMALIZE_IMAGES = True
     cfg.DATASETS.NORMALIZE_MESH = True
+    cfg.DATASETS.INITIALIZE_MESH = True
     cfg.DATASETS.SIZE = 0
 
     # ------------------------------------------------------------------------ #

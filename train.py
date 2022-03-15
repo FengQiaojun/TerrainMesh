@@ -87,6 +87,8 @@ if __name__ == "__main__":
         "focal_length": cfg.MODEL.MESH_HEAD.FOCAL_LENGTH,
         "semantic": cfg.MODEL.SEMANTIC,
         "graph_conv_semantic": cfg.MODEL.MESH_HEAD.GRAPH_CONV_SEMANTIC,
+        "class_weight": cfg.MODEL.DEEPLAB.CLASS_WEIGHT,
+        "sem_loss_func": cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_FUNC,
         "device": device
     }
     loss_fn = MeshHybridLoss(**loss_fn_kwargs)
@@ -114,7 +116,6 @@ if __name__ == "__main__":
     
         if cfg.MODEL.SEMANTIC and epoch == cfg.SOLVER.SEM_START_EPOCH:
             loss_fn.set_semantic_weight(cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT)
-            model.set_semantic(True)
             print("Switch to semantic mode at epoch ",epoch)
         
         num_count = 0
@@ -136,6 +137,8 @@ if __name__ == "__main__":
                 input_img = torch.cat((rgb_img,init_mesh_render_depth,depth_edt),dim=1)
             elif cfg.MODEL.CHANNELS == 9:
                 input_img = torch.cat((rgb_img,init_mesh_render_depth,depth_edt,sem_2d_pred[:,1:5,::]),dim=1)
+            elif cfg.MODEL.CHANNELS == 2:
+                input_img = torch.cat((init_mesh_render_depth,depth_edt),dim=1)
             mesh_pred = model(input_img, init_mesh, sem_2d_pred)
             # scale the mesh back to calculate loss
             if cfg.DATASETS.NORMALIZE_MESH:

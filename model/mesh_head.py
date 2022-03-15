@@ -23,6 +23,7 @@ class MeshRefinementHead(nn.Module):
         graph_conv_init = cfg.MODEL.MESH_HEAD.GRAPH_CONV_INIT
         num_classes     = cfg.MODEL.MESH_HEAD.NUM_CLASSES
         num_vertices    = cfg.MODEL.MESH_HEAD.NUM_VERTICES
+        sem_residual    = cfg.MODEL.MESH_HEAD.SEMANTIC_RESIDUAL
         #vert_offset_threshold = cfg.MODEL.MESH_HEAD.OFFSET_THRESHOLD
         vert_offset_threshold = None
         # fmt: on
@@ -34,15 +35,15 @@ class MeshRefinementHead(nn.Module):
             vert_feat_dim = 0 if i == 0 else hidden_dim
             if self.stage_list[i] == "geo":
                 stage = MeshGeoRefinementStage(
-                    input_channels, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init=graph_conv_init, vert_offset_threshold=vert_offset_threshold
+                    input_channels, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init=graph_conv_init, vert_offset_threshold=vert_offset_threshold, sem_residual=sem_residual
                 )
             elif self.stage_list[i] == "sem":
                 stage = MeshSemRefinementStage(
-                    input_channels, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init=graph_conv_init, vert_offset_threshold=vert_offset_threshold
+                    input_channels, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init=graph_conv_init, vert_offset_threshold=vert_offset_threshold, sem_residual=sem_residual
                 )  
             elif self.stage_list[i] == "hybrid":              
                 stage = MeshRefinementStage(
-                    input_channels, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init=graph_conv_init, vert_offset_threshold=vert_offset_threshold
+                    input_channels, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init=graph_conv_init, vert_offset_threshold=vert_offset_threshold, sem_residual=sem_residual
                 )
             else:
                 print("Error in stage name!")
@@ -73,13 +74,11 @@ class MeshRefinementHead(nn.Module):
             #    meshes, vert_feats = subdivide(meshes, feats=vert_feats)
         return output_meshes
 
-    def set_semantic(self, semantic):
-        for i, stage in enumerate(self.stages):
-            stage.set_semantic(semantic)
+
 
 
 class MeshGeoRefinementStage(nn.Module):
-    def __init__(self, img_feat_dim, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init="normal", vert_offset_threshold=None):
+    def __init__(self, img_feat_dim, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init="normal", vert_offset_threshold=None, sem_residual=True):
         """
         Args:
           img_feat_dim (int): Dimension of features we will get from vert_align
@@ -161,7 +160,7 @@ class MeshGeoRefinementStage(nn.Module):
 
 
 class MeshSemRefinementStage(nn.Module):
-    def __init__(self, img_feat_dim, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init="normal", vert_offset_threshold=None):
+    def __init__(self, img_feat_dim, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init="normal", vert_offset_threshold=None, sem_residual=True):
         """
         Args:
           img_feat_dim (int): Dimension of features we will get from vert_align
@@ -176,6 +175,7 @@ class MeshSemRefinementStage(nn.Module):
         self.num_vertices = num_vertices
         self.num_classes = num_classes 
         self.vert_offset_threshold = vert_offset_threshold
+        self.sem_residual = sem_residual
 
         self.bottleneck_semantic = nn.Linear(img_feat_dim, hidden_dim)
         self.vert_semantic = nn.Linear(hidden_dim + 3 + self.num_classes, self.num_classes)
@@ -239,7 +239,10 @@ class MeshSemRefinementStage(nn.Module):
         meshes_textures = self.vert_semantic(vert_feats_semantic).view(-1, self.num_vertices, self.num_classes)
         vert_pos_padded = project_verts(meshes.verts_padded(), P)
         vert_align_sem = vert_align(sem_2d, vert_pos_padded)
-        meshes.textures = TexturesVertex(verts_features=vert_align_sem+meshes_textures)
+        if self.sem_residual:
+            meshes.textures = TexturesVertex(verts_features=vert_align_sem+meshes_textures)
+        else:
+            meshes.textures = TexturesVertex(verts_features=meshes_textures)
 
         vert_feats_nopos = None
 
@@ -247,7 +250,7 @@ class MeshSemRefinementStage(nn.Module):
 
 
 class MeshRefinementStage(nn.Module):
-    def __init__(self, img_feat_dim, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init="normal", vert_offset_threshold=None):
+    def __init__(self, img_feat_dim, vert_feat_dim, hidden_dim, num_vertices, num_classes, stage_depth, gconv_init="normal", vert_offset_threshold=None, sem_residual=True):
         """
         Args:
           img_feat_dim (int): Dimension of features we will get from vert_align
@@ -262,6 +265,7 @@ class MeshRefinementStage(nn.Module):
         self.num_vertices = num_vertices
         self.num_classes = num_classes 
         self.vert_offset_threshold = vert_offset_threshold
+        self.sem_residual = sem_residual
 
         self.bottleneck = nn.Linear(img_feat_dim, hidden_dim)
         self.bottleneck_semantic = nn.Linear(img_feat_dim, hidden_dim)
@@ -319,7 +323,6 @@ class MeshRefinementStage(nn.Module):
         else:
             vert_pos_padded = meshes.verts_padded()
             vert_pos_packed = meshes.verts_packed()
-
         vert_align_feats = vert_align(sem_2d, vert_pos_padded)
         meshes.textures = TexturesVertex(verts_features=vert_align_feats)
 
@@ -348,6 +351,20 @@ class MeshRefinementStage(nn.Module):
             vert_offsets[torch.where(vert_offsets>self.vert_offset_threshold)] = self.vert_offset_threshold
         meshes_out = meshes.offset_verts(vert_offsets)
         
+        '''# Re-retrieve the semantic features
+        if P is not None:
+            vert_pos_padded = project_verts(meshes.verts_padded(), P)
+            #vert_pos_packed = _padded_to_packed(vert_pos_padded, verts_padded_to_packed_idx)
+            vert_pos_packed = _padded_to_packed(meshes.verts_padded(), verts_padded_to_packed_idx)
+        else:
+            vert_pos_padded = meshes.verts_padded()
+            vert_pos_packed = meshes.verts_packed()
+        vert_align_feats = vert_align(sem_2d, vert_pos_padded)
+        meshes.textures = TexturesVertex(verts_features=vert_align_feats)
+        vert_align_feats_project = vert_align(img_feats, vert_pos_padded)
+        vert_align_feats_project = _padded_to_packed(vert_align_feats_project, verts_padded_to_packed_idx)
+        '''# Re-retrieve the semantic features
+        
         vert_align_feats_semantic = F.relu(self.bottleneck_semantic(vert_align_feats_project))
         # Prepare features for first graph conv layer
         first_layer_feats = [vert_align_feats_semantic, vert_pos_packed, meshes.textures.verts_features_packed()]
@@ -363,7 +380,10 @@ class MeshRefinementStage(nn.Module):
         meshes_textures = self.vert_semantic(vert_feats_semantic).view(-1, self.num_vertices, self.num_classes)
         vert_pos_padded = project_verts(meshes_out.verts_padded(), P)
         vert_align_sem = vert_align(sem_2d, vert_pos_padded)
-        meshes_out.textures = TexturesVertex(verts_features=vert_align_sem+meshes_textures)
+        if self.sem_residual:
+            meshes_out.textures = TexturesVertex(verts_features=vert_align_sem+meshes_textures)
+        else:
+            meshes_out.textures = TexturesVertex(verts_features=meshes_textures)
 
         return meshes_out, vert_feats_nopos, vert_sem_feats_nopos
 

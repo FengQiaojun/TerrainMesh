@@ -4,7 +4,7 @@ MODEL:
   CHANNELS: 5
   SEMANTIC: False
   RESUME: True
-  RESUME_MODEL: "checkpoints/0303_1756_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_channel5_1_3_32_0.0005/model_best_depth.tar"
+  RESUME_MODEL: "checkpoints/0311_0758_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Dice_channel5_2_3_32_0.0005/model_best_depth.tar"
   DEEPLAB:
     LR: 1e-2
     NUM_EPOCHS: 50
@@ -28,11 +28,13 @@ MODEL:
     LAPLACIAN_LOSS_WEIGHT: 0.5
     DEPTH_LOSS_WEIGHT: 3.0
     SEMANTIC_LOSS_WEIGHT: 0.5
+    SEMANTIC_LOSS_FUNC: "CrossEntropy"
     NUM_CLASSES: 5
     FOCAL_LENGTH: 2
     IMAGE_SIZE: 512
     NUM_VERTICES: 1024
     OFFSET_THRESHOLD: 0.1
+    SEMANTIC_RESIDUAL: True
 DATASETS:
   NAME: "Sensat"
   DATA_DIR: "/mnt/NVMe-2TB/qiaojun/SensatUrban/"
@@ -46,6 +48,7 @@ DATASETS:
   NORMALIZE_IMAGES: False
   SHUFFLE: True
   NORMALIZE_MESH: True
+  INITIALIZE_MESH: True
 SOLVER:
   BATCH_SIZE: 16 # 32
   BATCH_SIZE_EVAL: 8
@@ -56,4 +59,4 @@ SOLVER:
   SCHEDULER_STEP_SIZE: 50
   SCHEDULER_GAMMA: 0.1
   LOGGING_PERIOD: 50
-  GPU_ID: 0
+  GPU_ID: 1

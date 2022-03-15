@@ -48,6 +48,7 @@ def build_data_loader(
             samples=cfg.DATASETS.SAMPLES,
             depth_scale=cfg.DATASETS.DEPTH_SCALE,
             normalize_mesh=cfg.DATASETS.NORMALIZE_MESH,
+            initialize_mesh=cfg.DATASETS.INITIALIZE_MESH,
             normalize_images=cfg.DATASETS.NORMALIZE_IMAGES,
             size=cfg.DATASETS.SIZE if cfg.DATASETS.SIZE!=0 else None
         )

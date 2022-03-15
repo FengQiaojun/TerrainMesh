@@ -8,6 +8,35 @@
 
 ### Existing models:
 
+Geo:  
+0309_1635_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_2_3_32_0.0005  
+Geo w/o init:  
+0310_0958_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_2_3_32_0.0005  
+Geo w/o norm:  
+0310_0959_resnet18_train_mesh1024_depth[1000]_2D_3D_channel5_2_3_32_0.0005  
+Geo RGB+RD:  
+0311_1848_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel4_2_3_32_0.0005  
+Geo RGB:  
+0311_1849_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel3_2_3_32_0.0005  
+Geo RD+EDT:  
+0311_2212_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel2_2_3_32_0.0005
+Geo Mesh 576:  
+0312_1051_resnet18_train_mesh576_depth[1000]_dnorm_2D_3D_channel5_2_3_32_0.0005  
+Geo Mesh 2025:  
+0312_2121_resnet18_train_mesh2025_depth[1000]_dnorm_2D_3D_channel5_2_3_32_0.0005  
+
+Entropy Hybrid:  
+0311_1817_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_CrossEntropy_channel5_2_3_32_0.0005
+Focal Hybrid:  
+0311_0756_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Focal_channel5_2_3_32_0.0005  
+Jaccard Hybrid:  
+0310_1531_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Jaccard_channel5_2_3_32_0.0005  
+Dice Hybrid:  
+0311_0758_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Dice_channel5_2_3_32_0.0005  
+Dice no residual:  
+0314_1955_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Dice_channel5_2_3_32_0.0005
+
+
 __0206_1642_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_3_3_64_0.0005__  
 Geometry training, 100 epochs. Add semantic feature channel but zero. 5 channels.  
 

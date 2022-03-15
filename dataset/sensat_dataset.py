@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # - samples: [500,1000,2000,4000]
 # - depth_scale:
 class SensatDataset(Dataset):
-    def __init__(self, data_dir, split=None, meshing=None, samples=None, depth_scale=None, normalize_mesh = False, normalize_images=True, size=None):
+    def __init__(self, data_dir, split=None, meshing=None, samples=None, depth_scale=None, normalize_mesh=False, initialize_mesh=True, normalize_images=True, size=None):
         transform = [transforms.ToTensor()]
         # do imagenet normalization
         if normalize_images:
@@ -33,6 +33,7 @@ class SensatDataset(Dataset):
         self.samples = samples
         self.depth_scale = depth_scale
         self.normalize_mesh = normalize_mesh
+        self.initialize_mesh = initialize_mesh
 
         self.rgb_img_ids = []
         self.sparse_depth_ids = []
@@ -108,9 +109,12 @@ class SensatDataset(Dataset):
         depth_edt = torch.unsqueeze(depth_edt, dim=0)
         sem_pred = torch.load(sem_pred_path)
         # TODO: whether to do so?
-        #sem_pred = nn.Softmax(dim=0)(sem_pred/100)
+        #sem_pred = nn.Softmax(dim=0)(sem_pred/100) 
         init_mesh_v, init_mesh_f, _ = load_obj(
-            init_mesh_path, load_textures=False)
+                init_mesh_path, load_textures=False)
+        if not self.initialize_mesh:
+            init_mesh_scale = torch.mean(init_mesh_v[:,2])
+            init_mesh_v *= init_mesh_scale/init_mesh_v[:,2:3]
         if self.normalize_mesh:
             init_mesh_scale = torch.mean(init_mesh_v[:,2])
             init_mesh_v /= init_mesh_scale
@@ -284,6 +288,9 @@ def load_data_by_index(cfg,
     init_mesh_v, init_mesh_f, _ = load_obj(
         init_mesh_path, load_textures=False)
     
+    #init_mesh_scale = torch.mean(init_mesh_v[:,2])
+    #init_mesh_v *= init_mesh_scale/init_mesh_v[:,2:3]
+   
     init_mesh_scale = torch.mean(init_mesh_v[:,2])
     init_mesh_v /= init_mesh_scale
 

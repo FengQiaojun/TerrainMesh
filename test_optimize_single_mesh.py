@@ -23,7 +23,7 @@ from dataset.sensat_dataset import load_data_by_index
 from loss import MeshHybridLoss
 from utils.project_verts import project_verts
 from utils.semantic_labels import convert_class_to_rgb_sensat_simplified
-from mesh_sem_opt import mesh_sem_opt
+from mesh_sem_opt import mesh_sem_opt_visualize
 
 cfg_file = "Sensat_single.yaml"
 lr = 1e-2
@@ -50,12 +50,14 @@ if __name__ == "__main__":
         "focal_length": cfg.MODEL.MESH_HEAD.FOCAL_LENGTH,
         "semantic": cfg.MODEL.SEMANTIC,
         "graph_conv_semantic": cfg.MODEL.MESH_HEAD.GRAPH_CONV_SEMANTIC,
+        "class_weight": cfg.MODEL.DEEPLAB.CLASS_WEIGHT,
+        "sem_loss_func": cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_FUNC,
         "device": device
     }
     loss_fn = MeshHybridLoss(**loss_fn_kwargs)
 
-    for seq_idx in ["birmingham_5"]:
-        for img_idx in [12]:
+    for seq_idx in ["cambridge_10"]:
+        for img_idx in [647]:
             img_idx = "%04d"%img_idx 
             rgb_img, sparse_depth, depth_edt, sem_pred, mesh, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, gt_semantic = load_data_by_index(cfg = cfg, seq_idx = seq_idx,img_idx=img_idx,meshing="mesh1024",samples="1000",device=device)
             mesh = mesh.scale_verts(init_mesh_scale)
@@ -73,7 +75,7 @@ if __name__ == "__main__":
             print("chamfer",losses["chamfer_0"])
             print("depth",losses["depth_0"])
             print("semantic",losses["semantic_0"])
-            new_mesh = mesh_sem_opt(mesh, sem_pred, lr, iters)
+            new_mesh = mesh_sem_opt_visualize(mesh, gt_semantic, lr=1e-1, iters=100)
             loss, losses = loss_fn([new_mesh], None, gt_mesh_pcd, gt_depth, gt_semantic)
             print("chamfer",losses["chamfer_0"])
             print("depth",losses["depth_0"])

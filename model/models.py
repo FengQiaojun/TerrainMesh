@@ -64,5 +64,3 @@ class VoxMeshHead(nn.Module):
         else:
             return refined_meshes
 
-    def set_semantic(self, semantic):
-        self.mesh_head.set_semantic(semantic)
