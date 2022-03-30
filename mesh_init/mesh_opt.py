@@ -25,7 +25,6 @@ from pytorch3d.renderer import (
 )
 from pytorch3d.io import save_obj, save_ply
 
-
 class MeshRendererWithDepth(nn.Module):
     def __init__(self, rasterizer):
         super().__init__()

@@ -16,7 +16,7 @@ from model.deeplab import deeplabv3_resnet18, deeplabv3_resnet34, deeplabv3_resn
 from utils.model_record_name import generate_segmodel_record_name
 from utils.stream_metrics import StreamSegMetrics
 
-cfg_file = "Sensat_basic.yaml"
+cfg_file = "Sensat_deeplab.yaml"
 
 if __name__ == "__main__":
     # Load the config and create a folder to save the outputs.
@@ -35,15 +35,17 @@ if __name__ == "__main__":
     #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Build the model
-    #model = torch.hub.load('pytorch/vision:v0.8.0', 'deeplabv3_resnet50', pretrained=True)
-    #model.classifier[4] = nn.Conv2d(256, cfg.MODEL.DEEPLAB.NUM_CLASSES, kernel_size=1, stride=1)
+    model = torch.hub.load('pytorch/vision:v0.8.0', 'deeplabv3_resnet50', pretrained=True)
+    model.classifier[4] = nn.Conv2d(256, cfg.MODEL.DEEPLAB.NUM_CLASSES, kernel_size=1, stride=1)
     #model.backbone.conv1 = nn.Conv2d(cfg.MODEL.CHANNELS, 64, kernel_size=7, stride=2, padding=3, bias=False)
+    '''
     if cfg.MODEL.BACKBONE == "resnet50":
         model = deeplabv3_resnet50(cfg)
     elif cfg.MODEL.BACKBONE == "resnet34":
         model = deeplabv3_resnet34(cfg)
     elif cfg.MODEL.BACKBONE == "resnet18":
         model = deeplabv3_resnet18(cfg)
+    '''
     #model = nn.DataParallel(model)
     model.to(device)
 
@@ -83,7 +85,7 @@ if __name__ == "__main__":
     for epoch in range(cfg.MODEL.DEEPLAB.NUM_EPOCHS):
 
         # Validation
-        if (epoch)%10 == 0 or epoch+1 == cfg.MODEL.DEEPLAB.NUM_EPOCHS:
+        if (epoch)%cfg.SOLVER.LOGGING_PERIOD == 0 or epoch+1 == cfg.MODEL.DEEPLAB.NUM_EPOCHS:
             model.eval()
             loss_sum = 0
             num_count = 0

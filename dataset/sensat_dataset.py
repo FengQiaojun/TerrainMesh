@@ -4,6 +4,7 @@ import numpy as np
 from imageio import imread
 from tqdm import tqdm
 import torch
+import torch.nn as nn
 from torch.utils.data import Dataset
 from torchvision import transforms
 from pytorch3d.io import load_obj
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 # - samples: [500,1000,2000,4000]
 # - depth_scale:
 class SensatDataset(Dataset):
-    def __init__(self, data_dir, split=None, meshing=None, samples=None, depth_scale=None, normalize_mesh = False, normalize_images=True, size=None):
+    def __init__(self, data_dir, split=None, meshing=None, samples=None, depth_scale=None, normalize_mesh=False, initialize_mesh=True, normalize_images=True, size=None):
         transform = [transforms.ToTensor()]
         # do imagenet normalization
         if normalize_images:
@@ -32,10 +33,12 @@ class SensatDataset(Dataset):
         self.samples = samples
         self.depth_scale = depth_scale
         self.normalize_mesh = normalize_mesh
+        self.initialize_mesh = initialize_mesh
 
         self.rgb_img_ids = []
         self.sparse_depth_ids = []
         self.depth_edt_ids = []
+        self.sem_pred_ids = []
         self.init_mesh_ids = []
         self.init_mesh_render_depth_ids = []
         self.gt_depth_ids = []
@@ -58,6 +61,8 @@ class SensatDataset(Dataset):
                             data_dir, seq, "Pcds_"+str(sam), target))
                     self.depth_edt_ids.append(os.path.join(
                             data_dir, seq, "Pcds_"+str(sam), target_idx+"_edt.pt"))
+                    self.sem_pred_ids.append(os.path.join(
+                            data_dir, seq, "Semantics_2D", target_idx+".pt"))                        
                     self.init_mesh_ids.append(os.path.join(
                             data_dir, seq, "Pcds_"+str(sam), target_idx+"_"+meshing+".obj"))
                     self.init_mesh_render_depth_ids.append(os.path.join(
@@ -84,6 +89,7 @@ class SensatDataset(Dataset):
         rgb_img_path = self.rgb_img_ids[idx]
         sparse_depth_path = self.sparse_depth_ids[idx]
         depth_edt_path = self.depth_edt_ids[idx]
+        sem_pred_path = self.sem_pred_ids[idx]
         init_mesh_path = self.init_mesh_ids[idx]
         init_mesh_render_depth_path = self.init_mesh_render_depth_ids[idx]
         gt_depth_path = self.gt_depth_ids[idx]
@@ -101,8 +107,12 @@ class SensatDataset(Dataset):
         edt_input_scale = 20
         depth_edt = torch.clamp(torch.load(depth_edt_path).float()/edt_input_scale, min=0, max=2)
         depth_edt = torch.unsqueeze(depth_edt, dim=0)
+        sem_pred = torch.load(sem_pred_path)
         init_mesh_v, init_mesh_f, _ = load_obj(
-            init_mesh_path, load_textures=False)
+                init_mesh_path, load_textures=False)
+        if not self.initialize_mesh:
+            init_mesh_scale = torch.mean(init_mesh_v[:,2])
+            init_mesh_v *= init_mesh_scale/init_mesh_v[:,2:3]
         if self.normalize_mesh:
             init_mesh_scale = torch.mean(init_mesh_v[:,2])
             init_mesh_v /= init_mesh_scale
@@ -118,16 +128,17 @@ class SensatDataset(Dataset):
         gt_mesh_pcd = torch.load(gt_mesh_pcd_path)
         sem_img = np.asfarray(imread(sem_img_path), dtype=np.int8)
         sem_img = torch.tensor(sem_img, dtype = torch.long)
-        return rgb_img, sparse_depth, depth_edt, init_mesh_v, init_mesh_f, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img
+        return rgb_img, sparse_depth, depth_edt, sem_pred, init_mesh_v, init_mesh_f, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img
         
     # TODO
     @staticmethod
     def collate_fn(batch):
-        rgb_img, sparse_depth, depth_edt, init_mesh_v, init_mesh_f, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img = zip(
+        rgb_img, sparse_depth, depth_edt, sem_pred, init_mesh_v, init_mesh_f, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img = zip(
             *batch)
         rgb_img = torch.stack(rgb_img, dim=0)
         sparse_depth = torch.stack(sparse_depth, dim=0)
         depth_edt = torch.stack(depth_edt, dim=0)
+        sem_pred = torch.stack(sem_pred, dim=0)
         if init_mesh_v[0] is not None and init_mesh_f[0] is not None:
             init_mesh = Meshes(verts=list(init_mesh_v),
                                faces=list(init_mesh_f),)
@@ -138,15 +149,16 @@ class SensatDataset(Dataset):
         gt_depth = torch.stack(gt_depth, dim=0)
         gt_mesh_pcd = torch.stack(gt_mesh_pcd, dim=0)
         sem_img = torch.stack(sem_img, dim=0)
-        return rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img
+        return rgb_img, sparse_depth, depth_edt, sem_pred, init_mesh, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img
 
     def postprocess(self, batch, device=None):
         if device is None:
             device = torch.device("cuda")
-        rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img = batch
+        rgb_img, sparse_depth, depth_edt, sem_pred, init_mesh, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img = batch
         rgb_img = rgb_img.to(device)
         sparse_depth = sparse_depth.to(device)
         depth_edt = depth_edt.to(device)
+        sem_pred = sem_pred.to(device)
         if init_mesh is not None:
             init_mesh = init_mesh.to(device)
         init_mesh_scale = init_mesh_scale.to(device)
@@ -155,7 +167,7 @@ class SensatDataset(Dataset):
         if gt_mesh_pcd is not None:
             gt_mesh_pcd = gt_mesh_pcd.to(device)
         sem_img = sem_img.to(device)
-        return rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img
+        return rgb_img, sparse_depth, depth_edt, sem_pred, init_mesh, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img
 
 
 class SensatSemanticDataset(Dataset):
@@ -237,88 +249,80 @@ class SensatSemanticDataset(Dataset):
 
 # define a data loading function that only read one instance in TerrainDataset(WHU)
 def load_data_by_index(cfg,
-                       split="",
                        seq_idx="",
                        img_idx="",
+                       meshing="",
+                       samples="",
                        device=None
                        ):
+
     data_dir = cfg.DATASETS.DATA_DIR
-    split = split
-    samples = cfg.DATASETS.SAMPLES
-    meshing = cfg.DATASETS.MESHING
-    noise = cfg.DATASETS.NOISE
 
-    root = os.path.join(data_dir, split)
-    rgb_img_path = os.path.join(root, seq_idx, "Images", img_idx+".png")
-    gt_depth_path = os.path.join(root, seq_idx, "Depths", img_idx+".png")
-    gt_mesh_path = os.path.join(root, seq_idx, "Meshes", img_idx+".pt")
-
-    if meshing == "regular":
-        init_mesh_ext = "_mesh_render"
-    elif meshing == "regular576":
-        init_mesh_ext = "_mesh576_render"
-    elif meshing == "superpixel":
-        init_mesh_ext = "_spmesh_render"
-    elif meshing == "sfm":
-        init_mesh_ext = "_sfmmesh_render"
-    else:
-        raise ValueError(
-                "Only accept meshing = [\"regular\",\"superpixel\",\"sfm\"]")
-
-    if noise:
-        sparse_depth_path = os.path.join(
-                root, seq_idx, "Pcds_"+str(samples), img_idx+".png")
-        mesh_render_depth_path = os.path.join(
-                root, seq_idx, "Pcds_"+str(samples), img_idx+init_mesh_ext+".png")
-        depth_edt_path = os.path.join(
-                root, seq_idx, "Pcds_"+str(samples), img_idx+"_edt.pt")
-        init_mesh = os.path.join(
-                root, seq_idx, "Pcds_"+str(samples), img_idx+init_mesh_ext+".obj")
-    else:
-        sparse_depth_path = os.path.join(
-                root, seq_idx, "Pcds_"+str(samples)+"_gt", img_idx+".png")
-        mesh_render_depth_path = os.path.join(
-                root, seq_idx, "Pcds_"+str(samples)+"_gt", img_idx+init_mesh_ext+".png")
-        depth_edt_path = os.path.join(
-                root, seq_idx, "Pcds_"+str(samples)+"_gt", img_idx+"_edt.pt")
-        init_mesh = os.path.join(
-                root, seq_idx, "Pcds_"+str(samples)+"_gt", img_idx+init_mesh_ext+".obj")
+    root = os.path.join(data_dir, seq_idx)
+    rgb_img_path = os.path.join(root, "Images", img_idx+".png")
+    sparse_depth_path = os.path.join(root, "Pcds_"+samples, img_idx+".png")
+    depth_edt_path = os.path.join(root, "Pcds_"+samples, img_idx+"_edt.pt")
+    sem_pred_path = os.path.join(root, "Semantics_2D", img_idx+".pt")
+    init_mesh_path = os.path.join(root, "Pcds_"+samples, img_idx+"_"+meshing+".obj")
+    init_mesh_render_depth_path = os.path.join(root, "Pcds_"+samples, img_idx+"_"+meshing+".png")
+    gt_depth_path = os.path.join(root, "Depths", img_idx+".png")
+    gt_mesh_pcd_path = os.path.join(root, "Meshes", img_idx+"_pcd.pt")
+    sem_img_path = os.path.join(root, "Semantics_5", img_idx+".png")
 
     rgb_img = np.asfarray(imread(rgb_img_path)/255, dtype=np.float32)
-    rgb_img = T.ToTensor()(rgb_img)
+    rgb_img = transforms.ToTensor()(rgb_img)
     # TODO: why divide by 1000?
+    depth_input_scale = 1000
     sparse_depth = np.asfarray(
-            imread(sparse_depth_path)/64, dtype=np.float32)/1000
-    sparse_depth = T.ToTensor()(sparse_depth)
-    mesh_render_depth = np.asfarray(
-            imread(mesh_render_depth_path)/64, dtype=np.float32)/1000
-    mesh_render_depth = T.ToTensor()(mesh_render_depth)
-    depth_edt = torch.clamp(torch.load(
-            depth_edt_path).float()/20, min=0, max=2)
+            imread(sparse_depth_path)/1, dtype=np.float32)/depth_input_scale
+    sparse_depth = transforms.ToTensor()(sparse_depth)
+    # TODO: why divide by 20?
+    edt_input_scale = 20
+    depth_edt = torch.clamp(torch.load(depth_edt_path).float()/edt_input_scale, min=0, max=2)
     depth_edt = torch.unsqueeze(depth_edt, dim=0)
-    gt_depth = np.asfarray(imread(gt_depth_path)/64, dtype=np.float32)
-    gt_depth = T.ToTensor()(gt_depth)
-    init_mesh_v, init_mesh_f, _ = load_obj(init_mesh, load_textures=False)
+    sem_pred = torch.load(sem_pred_path)
+    init_mesh_v, init_mesh_f, _ = load_obj(
+        init_mesh_path, load_textures=False)
+    
+    #init_mesh_scale = torch.mean(init_mesh_v[:,2])
+    #init_mesh_v *= init_mesh_scale/init_mesh_v[:,2:3]
+   
+    init_mesh_scale = torch.mean(init_mesh_v[:,2])
+    init_mesh_v /= init_mesh_scale
+
     init_mesh_f = init_mesh_f.verts_idx
-    init_mesh = Meshes(verts=[init_mesh_v], faces=[init_mesh_f])
-    gt_mesh = torch.load(gt_mesh_path)
+    init_mesh_render_depth = np.asfarray(imread(
+            init_mesh_render_depth_path) / 100, dtype=np.float32)/depth_input_scale
+    init_mesh_render_depth = transforms.ToTensor()(init_mesh_render_depth)
+    gt_depth = np.asfarray(imread(gt_depth_path) / 100, dtype=np.float32)
+    gt_depth = transforms.ToTensor()(gt_depth)
+    gt_mesh_pcd = torch.load(gt_mesh_pcd_path)
+    sem_img = np.asfarray(imread(sem_img_path), dtype=np.int8)
+    sem_img = torch.tensor(sem_img, dtype = torch.long)
 
     rgb_img = torch.unsqueeze(rgb_img, dim=0)
     sparse_depth = torch.unsqueeze(sparse_depth, dim=0)
-    mesh_render_depth = torch.unsqueeze(mesh_render_depth, dim=0)
     depth_edt = torch.unsqueeze(depth_edt, dim=0)
+    sem_pred = torch.unsqueeze(sem_pred, dim=0)
+    init_mesh = Meshes(verts=[init_mesh_v], faces=[init_mesh_f])
+    init_mesh_scale = torch.unsqueeze(init_mesh_scale, dim=0)
+    init_mesh_render_depth = torch.unsqueeze(init_mesh_render_depth, dim=0)
     gt_depth = torch.unsqueeze(gt_depth, dim=0)
-    gt_mesh = torch.unsqueeze(gt_mesh, dim=0)
+    gt_mesh_pcd = torch.unsqueeze(gt_mesh_pcd, dim=0)
+    sem_img = torch.unsqueeze(sem_img, dim=0)
 
-    if device is None:
-        device = torch.device("cuda")
+
     rgb_img = rgb_img.to(device)
     sparse_depth = sparse_depth.to(device)
-    mesh_render_depth = mesh_render_depth.to(device)
     depth_edt = depth_edt.to(device)
-    gt_depth = gt_depth.to(device)
+    sem_pred = sem_pred.to(device)
     if init_mesh is not None:
         init_mesh = init_mesh.to(device)
-    if gt_mesh is not None:
-        gt_mesh = gt_mesh.to(device)
-    return rgb_img, sparse_depth, mesh_render_depth, depth_edt, gt_depth, init_mesh, gt_mesh
+    init_mesh_scale = init_mesh_scale.to(device)
+    init_mesh_render_depth = init_mesh_render_depth.to(device)
+    gt_depth = gt_depth.to(device)
+    if gt_mesh_pcd is not None:
+        gt_mesh_pcd = gt_mesh_pcd.to(device)
+    sem_img = sem_img.to(device)
+
+    return rgb_img, sparse_depth, depth_edt, sem_pred, init_mesh, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, sem_img

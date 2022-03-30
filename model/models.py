@@ -23,8 +23,10 @@ class VoxMeshHead(nn.Module):
         self.in_channels = cfg.MODEL.CHANNELS
         self.semantic = cfg.MODEL.SEMANTIC
 
-        if cfg.MODEL.SEMANTIC:
+        self.num_vertices = cfg.MODEL.MESH_HEAD.NUM_VERTICES 
+        self.num_classes = cfg.MODEL.MESH_HEAD.NUM_CLASSES
 
+<<<<<<< HEAD
             if cfg.MODEL.BACKBONE == "resnet50":
                 self.sem_model = deeplabv3_resnet50(cfg)
             elif cfg.MODEL.BACKBONE == "resnet34":
@@ -49,8 +51,10 @@ class VoxMeshHead(nn.Module):
             self.backbone, feat_dims = build_backbone(cfg.MODEL.BACKBONE,in_channels=cfg.MODEL.CHANNELS,ref_model=self.sem_model.backbone,pretrained=False)
         else:
             self.backbone, feat_dims = build_backbone(cfg.MODEL.BACKBONE,in_channels=cfg.MODEL.CHANNELS,ref_model=None,pretrained=False)
+=======
+        self.backbone, feat_dims = build_backbone(cfg.MODEL.BACKBONE,in_channels=cfg.MODEL.CHANNELS,ref_model=None,pretrained=False)
+>>>>>>> new_semantic
         
-
         cfg.MODEL.MESH_HEAD.COMPUTED_INPUT_CHANNELS = sum(feat_dims)
         self.mesh_head = MeshRefinementHead(cfg)
         focal_length = cfg.MODEL.MESH_HEAD.FOCAL_LENGTH
@@ -65,20 +69,31 @@ class VoxMeshHead(nn.Module):
     def _get_projection_matrix(self, N, device):
         return self.K[None].repeat(N, 1, 1).to(device).detach()
 
-    def forward(self, imgs, init_meshes):
+    def forward(self, imgs, init_meshes, sem_2d, return_init=False):
         N = imgs.shape[0]
         device = imgs.device
         img_feats = self.backbone(imgs)
         P = self._get_projection_matrix(N, device)
 
         # init mesh vertex semantic features
-        #pred_semantic = self.sem_model(imgs[:,0:3,:,:])["out"] 
         if self.semantic:
-            pred_semantic = self.sem_model(imgs[:,0:3,:,:])
             vert_pos_padded = project_verts(init_meshes.verts_padded(), P)
-            vert_align_feats = vert_align(pred_semantic, vert_pos_padded)
+            vert_align_feats = vert_align(sem_2d, vert_pos_padded)
             init_meshes.textures = TexturesVertex(verts_features=vert_align_feats)
+        else:
+            init_meshes.textures = TexturesVertex(verts_features=torch.zeros((N, self.num_vertices, self.num_classes), device=device))
+        
+        refined_meshes = self.mesh_head(img_feats, init_meshes, sem_2d, P)
+        
 
+        if return_init:
+            return refined_meshes, init_meshes
+        else:
+            return refined_meshes
+
+<<<<<<< HEAD
         refined_meshes = self.mesh_head(img_feats, init_meshes, P)
 
         return refined_meshes
+=======
+>>>>>>> new_semantic

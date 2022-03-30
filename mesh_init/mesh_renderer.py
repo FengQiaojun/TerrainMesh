@@ -48,6 +48,28 @@ class TextureShader(nn.Module):
         images = torch.squeeze(colors,dim=3)
         return images
 
+def render_mesh_texture(mesh,image_size=512,focal_length=-1,device=None):
+    R = torch.eye(3,device=device).reshape((1,3,3))
+    T = torch.zeros(1,3,device=device)
+    cameras = SfMPerspectiveCameras(device=device, R=R, T=T, focal_length=focal_length,)
+    raster_settings = RasterizationSettings(
+        image_size=image_size, 
+        blur_radius=0.0001,
+        faces_per_pixel=1, 
+        perspective_correct=False, # this seems solve the nan error
+    )
+    rasterizer=MeshRasterizer(
+        cameras=cameras, 
+        raster_settings=raster_settings
+    )
+    shader = TextureShader(device=device)
+    
+    renderer = MeshRendererWithFragments(
+        rasterizer=rasterizer, shader=shader
+    )
+    images, depth = renderer(mesh)
+    return images.permute(0,3,1,2), depth
+
 def render_mesh_vertex_texture(verts,faces,feats,image_size=512,focal_length=-1,device=None):
     textures = TexturesVertex(verts_features=feats.to(device))
     mesh = Meshes(verts=[verts.to(device)], faces=[faces.to(device)])
@@ -71,7 +93,6 @@ def render_mesh_vertex_texture(verts,faces,feats,image_size=512,focal_length=-1,
         rasterizer=rasterizer, shader=shader
     )
     images, depth = renderer(mesh)
-
     return images, depth
 
 class MeshRendererWithDepth(nn.Module):

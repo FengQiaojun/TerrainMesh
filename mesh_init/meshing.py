@@ -30,6 +30,18 @@ def regular_512_1024():
     Laplacian = mesh.laplacian_packed().to_dense().numpy()
     return vertices,faces,Laplacian
 
+def regular_512_2025():
+    x = np.linspace(-2,513,45)
+    y = np.linspace(-2,513,45)
+    xx, yy = np.meshgrid(x, y)
+    vertices = np.concatenate((xx[..., np.newaxis],yy[..., np.newaxis]),axis=-1)
+    vertices = np.reshape(vertices,(-1,2))
+    tri = Delaunay(vertices)
+    faces = tri.simplices
+    mesh = Meshes(verts=[torch.tensor(vertices)], faces=[torch.tensor(faces)])
+    Laplacian = mesh.laplacian_packed().to_dense().numpy()
+    return vertices,faces,Laplacian
+
 def regular_512_29584():
     x = np.linspace(-2,513,172)
     y = np.linspace(-2,513,172)

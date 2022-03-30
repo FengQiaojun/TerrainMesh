@@ -13,6 +13,7 @@ def generate_model_record_name(cfg, prefix):
         supervision+="3D_"
     if cfg.MODEL.SEMANTIC and cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT > 0:
         supervision+="Semantic_"
+        supervision+=cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_FUNC+"_"
     supervision = supervision[:-1]
     depth_normalized = "_"
     if cfg.DATASETS.NORMALIZE_MESH:

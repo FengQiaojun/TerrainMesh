@@ -45,7 +45,7 @@ def init_mesh(sparse_depth_img, vertices, faces, laplacian, pix_to_face, bary_co
         bary_c = bary_coords[d_idx[0],d_idx[1],:]
         A[i,v_idx] = bary_c
         b[i] = sparse_depth_img[d_idx[0],d_idx[1]]
-    A[-num_vertices:,:] = laplacian/num_vertices*num_sparse_depth*0.5
+    A[-num_vertices:,:] = laplacian/num_vertices*num_sparse_depth*3.0
     p, _ = torch.lstsq(torch.tensor(b).unsqueeze(1),torch.tensor(A))
     new_vertices = vertices * p.numpy()[:num_vertices,:]
     return new_vertices

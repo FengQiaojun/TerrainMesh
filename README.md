@@ -1,19 +1,98 @@
-Training Lessons:
+### TODO
+* Write/Verify the IoU metric
+* Rewrite the MeshRefinementStage to include 
+  * Only Geometric
+  * Only Semantic
+  * Joint Geometric & Semantic
+  These different stages.
+
+### Existing models:
+
+Geo:  
+0309_1635_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_2_3_32_0.0005  
+Geo w/o init:  
+0310_0958_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_2_3_32_0.0005  
+Geo w/o norm:  
+0310_0959_resnet18_train_mesh1024_depth[1000]_2D_3D_channel5_2_3_32_0.0005  
+Geo RGB+RD:  
+0311_1848_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel4_2_3_32_0.0005  
+Geo RGB:  
+0311_1849_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel3_2_3_32_0.0005  
+Geo RD+EDT:  
+0311_2212_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel2_2_3_32_0.0005
+Geo Mesh 576:  
+0312_1051_resnet18_train_mesh576_depth[1000]_dnorm_2D_3D_channel5_2_3_32_0.0005  
+Geo Mesh 2025:  
+0312_2121_resnet18_train_mesh2025_depth[1000]_dnorm_2D_3D_channel5_2_3_32_0.0005  
+
+Entropy Hybrid:  
+0311_1817_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_CrossEntropy_channel5_2_3_32_0.0005
+Focal Hybrid:  
+0311_0756_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Focal_channel5_2_3_32_0.0005  
+Jaccard Hybrid:  
+0310_1531_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Jaccard_channel5_2_3_32_0.0005  
+Dice Hybrid:  
+0311_0758_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Dice_channel5_2_3_32_0.0005  
+Dice no residual:  
+0315_1610_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Dice_channel5_2_3_32_0.0005
+
+
+__0206_1642_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_3_3_64_0.0005__  
+Geometry training, 100 epochs. Add semantic feature channel but zero. 5 channels.  
+
+__0208_2036_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_3_3_64_0.0005__  
+Geometry training, 100 epochs. Add semantic feature channel but zero. 5 channels.  
+
+__0210_1158_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_3_3_64_0.0005__  
+Geometry training to beat. Add semantic feature channel but zero. 5 channels.  
+
+__0210_2123_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_channel5_3_3_64_0.0005__  
+Geometry + Semantic all the way. Add semantic feature channel. 5 channels.
+
+__0211_1536_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_3_3_64_0.0005__  
+Geometry training to beat. Add semantic feature channel but zero. 5 channels.  
+
+__0211_2243_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_1_3_64_0.0005__  
+(New weight&scheduler) Geometry training to beat. Add semantic feature channel but zero. 5 channels.  
+
+__0211_2243_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_channel5_1_3_64_0.0005__  
+(New weight&scheduler) Geometry + Semantic all the way. Add semantic feature channel. 5 channels.  
+
+__0212_0021_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_channel5_1_3_64_0.0005__  
+(New weight&scheduler) Geometry + Semantic (starting from 70). Add semantic feature channel. 5 channels.  
+
+__0212_0958_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_channel5_1_3_32_0.0005__
+Semantic
+
+__0212_0959_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_1_3_32_0.0005__
+Geometric
+
+__0212_2039_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_1_3_32_0.0005__
+Geometric first 50 epochs (0212_0959) + Geometric next 50 epochs. 
+
+__0212_2040_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_channel5_1_3_32_0.0005__
+Geometric first 50 epochs (0212_0959) + Semantic next 50 epochs. Semantic weight 1e-2.
+
+__0212_2041_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_channel5_1_3_32_0.0005__  
+Geometric first 50 epochs (0212_0959) + Semantic next 50 epochs. Semantic weight 1.
+
+__0224_1630_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_2_3_32_0.0005__  
+Geometric. Stage 2
+
+__0224_1631_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_channel5_1_3_32_0.0005__  
+Geometric first 30 epochs (0212_0959) + Semantic next 70 epochs. Semantic weight 1e2.
+
+__0224_1632_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_channel5_1_3_32_0.0005__  
+Geometric first 30 epochs (0212_0959) + Semantic next 70 epochs. Semantic weight 1e-2.
+
+
+
 * Seems like the package versions matter (PyTorch, PyTorch3D)
+  * GO with this. PyTorch 1.6.0 + PyTorch3D 0.3.0 (Promising.)
   * PyTorch 1.6.0 + PyTorch3D 0.2.5 (Promising.)
-  * PyTorch 1.6.0 + PyTorch3D 0.3.0 (Promising.)
   * PyTorch 1.6.0 + PyTorch3D 0.4.0 (Tried very few epochs but seems not working well.)
   * PyTorch 1.7.1 + PyTorch3D 0.4.0 (Tried most. Not able to train stably.)
   * PyTorch 1.7.1 + PyTorch3D 0.6.1 (Tried very few epochs but seems not working well.)
-
-
-
-TODO: 
-* Find a way to introduce semantic without sacrificing the geometric performance.
-  Maybe use a separated GNN solely for geometric.
-* Also initialize the feature extractor and classifier modules. Whether we should train them?
-
-* Tune loss weight parameters. Start with only one or a few test cases to see what's going on.
 
 
 
@@ -21,15 +100,9 @@ terrainmesh.txt:
 This is the export file of a conda environment. Generated by conda list --explicit > terrainmesh.txt  
 Build an env from this: conda create --name terrainmesh --file terrainmesh.txt
 
-### Existing models:
-0124_2331_train_mesh1024_depth1000_channel3_focal_loss_50_0.01  
-The resnet50 model for semantic segmentation initialization. Takes 3 channels as inputs.  
 
-0125_1617_deeplab_resnet18_train_mesh1024_depth1000_channel3_focal_loss_50_0.01  
-The resnet18 model for semantic segmentation initialization. Takes 3 channels as inputs.  
 
-0125_1619_deeplab_resnet34_train_mesh1024_depth1000_channel3_focal_loss_50_0.01
-The resnet34 model for semantic segmentation initialization. Takes 3 channels as inputs.  
+
 
 0202_1359_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_3_3_64_0.0005
 

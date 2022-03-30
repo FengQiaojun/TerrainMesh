@@ -53,11 +53,16 @@ def get_sensat_cfg():
     cfg.MODEL.MESH_HEAD.RESNET_PRETRAIN = False
     # Numer of stages
     cfg.MODEL.MESH_HEAD.NUM_STAGES = 1
+    cfg.MODEL.MESH_HEAD.STAGE_LIST = []
     cfg.MODEL.MESH_HEAD.NUM_GRAPH_CONVS = 1  # per stage
     cfg.MODEL.MESH_HEAD.GRAPH_CONV_DIM = 256
+    cfg.MODEL.MESH_HEAD.GRAPH_CONV_DIM_SEMANTIC = False
     cfg.MODEL.MESH_HEAD.GRAPH_CONV_INIT = "normal"
     cfg.MODEL.MESH_HEAD.GRAPH_CONV_SEMANTIC = True
+<<<<<<< HEAD
     cfg.MODEL.MESH_HEAD.FREEZE_CLASSIFIER = True
+=======
+>>>>>>> new_semantic
     # Mesh sampling
     cfg.MODEL.MESH_HEAD.GT_NUM_SAMPLES = 5000
     cfg.MODEL.MESH_HEAD.PRED_NUM_SAMPLES = 5000
@@ -68,6 +73,8 @@ def get_sensat_cfg():
     cfg.MODEL.MESH_HEAD.LAPLACIAN_LOSS_WEIGHT = 1.0
     cfg.MODEL.MESH_HEAD.DEPTH_LOSS_WEIGHT = 1.0
     cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT = 1.0
+    # semantic loss function
+    cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_FUNC = ""
     # Init ico_sphere level (only for when voxel_on is false)
     cfg.MODEL.MESH_HEAD.ICO_SPHERE_LEVEL = -1
     # Mesh semantic label
@@ -79,6 +86,8 @@ def get_sensat_cfg():
     cfg.MODEL.MESH_HEAD.NUM_VERTICES = 1024
     # Deform threshold
     cfg.MODEL.MESH_HEAD.OFFSET_THRESHOLD = 1.0
+    # Semantic Residual
+    cfg.MODEL.MESH_HEAD.SEMANTIC_RESIDUAL = True
 
     # ------------------------------------------------------------------------ #
     # Datasets
@@ -96,6 +105,7 @@ def get_sensat_cfg():
     cfg.DATASETS.NUM_THREADS = 0
     cfg.DATASETS.NORMALIZE_IMAGES = True
     cfg.DATASETS.NORMALIZE_MESH = True
+    cfg.DATASETS.INITIALIZE_MESH = True
     cfg.DATASETS.SIZE = 0
 
     # ------------------------------------------------------------------------ #
@@ -106,7 +116,11 @@ def get_sensat_cfg():
     cfg.SOLVER.SCHEDULER_STEP_SIZE = 50
     cfg.SOLVER.SCHEDULER_GAMMA = 0.5
     cfg.SOLVER.NUM_EPOCHS = 300
+<<<<<<< HEAD
     cfg.SOLVER.SEM_START_EPOCH = 300
+=======
+    cfg.SOLVER.SEM_START_EPOCH = 0
+>>>>>>> new_semantic
     cfg.SOLVER.BASE_LR = 0.01
     cfg.SOLVER.OPTIMIZER = "sgd"  # {'sgd', 'adam'}
     cfg.SOLVER.MOMENTUM = 0.9
