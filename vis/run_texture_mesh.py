@@ -35,21 +35,7 @@ mean_depth = 70
 if __name__ == "__main__":
 
     
-    vertices,faces = regular_512_1024()    
-    vertices_2D = (vertices-image_size/2)/(image_size/2*focal_length)
-    vertices = np.hstack((vertices_2D,np.ones((vertices.shape[0],1))))
-    vertices *= mean_depth
-    #vertices[:,2] += 30
-    textured_mesh_flat = o3d.geometry.TriangleMesh()
-    textured_mesh_flat.vertices = o3d.utility.Vector3dVector(vertices)
-    textured_mesh_flat.triangles = o3d.utility.Vector3iVector(faces)
-    o3d.io.write_triangle_mesh(save_rgb_flat_mesh_path,textured_mesh_flat)
-    textured_mesh_flat = o3d.io.read_triangle_mesh(save_rgb_flat_mesh_path)
-    textured_mesh_flat = texture_mesh_by_vertices(textured_mesh_flat,depth_min,depth_max)
-    o3d.io.write_triangle_mesh(save_rgb_flat_mesh_path,textured_mesh_flat)
-    
     '''
-    
     depth_map = imread(depth_img_path)/100
     #print(np.min(depth_map))
     #print(np.max(depth_map*(depth_map < 600)))

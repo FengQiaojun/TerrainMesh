@@ -34,7 +34,7 @@ Jaccard Hybrid:
 Dice Hybrid:  
 0311_0758_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Dice_channel5_2_3_32_0.0005  
 Dice no residual:  
-0314_1955_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Dice_channel5_2_3_32_0.0005
+0315_1610_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Dice_channel5_2_3_32_0.0005
 
 
 __0206_1642_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_3_3_64_0.0005__  

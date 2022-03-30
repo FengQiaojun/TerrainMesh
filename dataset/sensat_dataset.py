@@ -108,8 +108,6 @@ class SensatDataset(Dataset):
         depth_edt = torch.clamp(torch.load(depth_edt_path).float()/edt_input_scale, min=0, max=2)
         depth_edt = torch.unsqueeze(depth_edt, dim=0)
         sem_pred = torch.load(sem_pred_path)
-        # TODO: whether to do so?
-        #sem_pred = nn.Softmax(dim=0)(sem_pred/100) 
         init_mesh_v, init_mesh_f, _ = load_obj(
                 init_mesh_path, load_textures=False)
         if not self.initialize_mesh:
@@ -283,8 +281,6 @@ def load_data_by_index(cfg,
     depth_edt = torch.clamp(torch.load(depth_edt_path).float()/edt_input_scale, min=0, max=2)
     depth_edt = torch.unsqueeze(depth_edt, dim=0)
     sem_pred = torch.load(sem_pred_path)
-    # TODO: whether to do so?
-    sem_pred = nn.Softmax(dim=0)(sem_pred/1)
     init_mesh_v, init_mesh_f, _ = load_obj(
         init_mesh_path, load_textures=False)
     

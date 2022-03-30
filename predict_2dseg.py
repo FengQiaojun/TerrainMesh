@@ -22,6 +22,7 @@ from pytorch3d.renderer import (
 
 from config import get_sensat_cfg
 from dataset.build_data_loader import build_data_loader
+from dataset.sensat_dataset import load_data_by_index
 from loss import MeshHybridLoss
 from mesh_init.mesh_renderer import render_mesh_texture
 from model.models import VoxMeshHead
@@ -50,7 +51,22 @@ if __name__ == "__main__":
     worker_id = cfg.SOLVER.GPU_ID
     device = torch.device("cuda:%d" % worker_id)
 
-    # Build the model
+
+
+    # Build the DataLoaders
+    loaders = {}
+    loaders["train"] = build_data_loader(cfg, "Sensat", split_name=cfg.DATASETS.TRAINSET, num_workers=cfg.DATASETS.NUM_THREADS)
+    loaders["val"] = build_data_loader(cfg, "Sensat", split_name=cfg.DATASETS.VALSET, num_workers=cfg.DATASETS.NUM_THREADS)
+    batch_num_train = int(np.ceil(len(loaders["train"].dataset)/loaders["train"].batch_size))
+    batch_num_val = int(np.ceil(len(loaders["val"].dataset)/loaders["val"].batch_size))
+    loaders["test"] = build_data_loader(
+        cfg, "Sensat", split_name=cfg.DATASETS.TESTSET, num_workers=cfg.DATASETS.NUM_THREADS)
+    batch_num_test = int(
+        np.ceil(len(loaders["test"].dataset)/loaders["test"].batch_size))
+    print("Test set size %d. Test batch number %d." %
+          (len(loaders["test"].dataset), batch_num_test))
+
+        # Build the model
     if cfg.MODEL.RESUME:
         save_model_path = cfg.MODEL.RESUME_MODEL
         #save_path = cfg.MODEL.RESUME_MODEL.replace("/model_best_depth.tar","")
@@ -67,21 +83,6 @@ if __name__ == "__main__":
         model.to(device)     
     model.eval()
 
-    # Build the DataLoaders
-    loaders = {}
-    loaders["train"] = build_data_loader(cfg, "Sensat", split_name=cfg.DATASETS.TRAINSET, num_workers=cfg.DATASETS.NUM_THREADS)
-    loaders["val"] = build_data_loader(cfg, "Sensat", split_name=cfg.DATASETS.VALSET, num_workers=cfg.DATASETS.NUM_THREADS)
-    batch_num_train = int(np.ceil(len(loaders["train"].dataset)/loaders["train"].batch_size))
-    batch_num_val = int(np.ceil(len(loaders["val"].dataset)/loaders["val"].batch_size))
-    loaders["test"] = build_data_loader(
-        cfg, "Sensat", split_name=cfg.DATASETS.TESTSET, num_workers=cfg.DATASETS.NUM_THREADS)
-    batch_num_test = int(
-        np.ceil(len(loaders["test"].dataset)/loaders["test"].batch_size))
-    print("Test set size %d. Test batch number %d." %
-          (len(loaders["test"].dataset), batch_num_test))
-
-
-
     num_count = 0
     loss_sum = 0
     loss_chamfer_sum = [0]*cfg.MODEL.MESH_HEAD.NUM_STAGES
@@ -89,6 +90,7 @@ if __name__ == "__main__":
     loss_semantic_sum = [0]*cfg.MODEL.MESH_HEAD.NUM_STAGES
 
     metrics = StreamSegMetrics(cfg.MODEL.DEEPLAB.NUM_CLASSES)
+    metrics_single = StreamSegMetrics(cfg.MODEL.DEEPLAB.NUM_CLASSES)
 
     loop = tqdm(enumerate(loaders["test"]), total=batch_num_test)
     #loop = tqdm(enumerate(loaders["val"]), total=batch_num_val)
@@ -123,10 +125,19 @@ if __name__ == "__main__":
         vert_align_feats = vert_align(sem_2d_pred, vert_pos_padded)
         mesh_pred[1].textures = TexturesVertex(verts_features=vert_align_feats)
         '''
-        sem_image, depth = render_mesh_texture(mesh_pred[1],image_size=512,focal_length=-2,device=device)
-
-        metrics.update(sem_2d_pred.detach().max(dim=1)[1].cpu().numpy(), gt_semantic.cpu().numpy())
+        sem_image, depth = render_mesh_texture(mesh_pred[-1],image_size=512,focal_length=-2,device=device)
+        metrics.update(sem_image.detach().max(dim=1)[1].cpu().numpy(), gt_semantic.cpu().numpy())
         
+        metrics_single.reset()
+        metrics_single.update(sem_image.detach().max(dim=1)[1].cpu().numpy(), gt_semantic.cpu().numpy())
+        score = metrics_single.get_results()
+        print("Class IoU",score['Class IoU'])
+        plt.subplot(121)
+        plt.imshow(convert_class_to_rgb_sensat_simplified(sem_image.detach().max(dim=1)[1].cpu().numpy()[0,::]))
+        plt.subplot(122)
+        plt.imshow(convert_class_to_rgb_sensat_simplified(gt_semantic.cpu().numpy()[0,::]))
+        plt.show()
+
     score = metrics.get_results()
     print("GT label distribution", np.sum(metrics.confusion_matrix,axis=1)/np.sum(metrics.confusion_matrix))
     print("Predict label distribution", np.sum(metrics.confusion_matrix,axis=0)/np.sum(metrics.confusion_matrix))

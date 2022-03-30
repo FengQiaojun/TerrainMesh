@@ -19,7 +19,7 @@ def align_vector_to_another(a=np.array([0, 0, 1]), b=np.array([1, 0, 0])):
     """
     Aligns vector a to vector b with axis angle rotation
     """
-    if np.array_equal(a, b) or np.array_equal(a, -b):
+    if np.array_equal(a, b):
         return None, None
     axis_ = np.cross(a, b)
     axis_ = axis_ / np.linalg.norm(axis_)
@@ -36,6 +36,8 @@ def normalized(a, axis=-1, order=2):
 
 
 class LineMesh(object):
+    
+    '''
     def __init__(self, points, lines=None, colors=[0, 1, 0], radius=0.15):
         """Creates a line represented as sequence of cylinder triangular meshes
 
@@ -51,6 +53,24 @@ class LineMesh(object):
         self.lines = np.array(
             lines) if lines is not None else self.lines_from_ordered_points(self.points)
         self.colors = np.array(colors)
+        self.radius = radius
+        self.cylinder_segments = []
+
+        self.create_line_mesh()
+    '''
+
+    def __init__(self, lineset, radius=0.15):
+        """Creates a line represented as sequence of cylinder triangular meshes
+
+        Arguments:
+            lineset {open3d.geometry.LineSet}
+
+        Keyword Arguments:
+            radius {float} -- radius of cylinder (default: {0.15})
+        """
+        self.points = np.array(lineset.points)
+        self.lines = np.array(lineset.lines)
+        self.colors = np.array(lineset.colors)
         self.radius = radius
         self.cylinder_segments = []
 
@@ -83,9 +103,8 @@ class LineMesh(object):
                 translation, relative=False)
             if axis is not None:
                 axis_a = axis * angle
-                cylinder_segment = cylinder_segment.rotate(R=o3d.geometry.get_rotation_matrix_from_axis_angle(axis_a), center=cylinder_segment.get_center())
-                # cylinder_segment = cylinder_segment.rotate(
-                #   axis_a, center=True, type=o3d.geometry.RotationType.AxisAngle)
+                cylinder_segment = cylinder_segment.rotate(
+                    R=o3d.geometry.get_rotation_matrix_from_axis_angle(axis_a), center=cylinder_segment.get_center())
             # color cylinder
             color = self.colors if self.colors.ndim == 1 else self.colors[i, :]
             cylinder_segment.paint_uniform_color(color)
@@ -118,17 +137,18 @@ def main():
     line_set.colors = o3d.utility.Vector3dVector(colors)
 
     # Create Line Mesh 1
-    points = np.array(points) + [0, 0, 2]
-    line_mesh1 = LineMesh(points, lines, colors, radius=0.02)
+    line_mesh1 = LineMesh(line_set, radius=0.02)
     line_mesh1_geoms = line_mesh1.cylinder_segments
 
     # Create Line Mesh 1
-    points = np.array(points) + [0, 2, 0]
-    line_mesh2 = LineMesh(points, radius=0.03)
-    line_mesh2_geoms = line_mesh2.cylinder_segments
+    # points = np.array(points) + [0, 2, 0]
+    # line_mesh2 = LineMesh(points, radius=0.03)
+    # line_mesh2_geoms = line_mesh2.cylinder_segments
 
+    # o3d.visualization.draw_geometries(
+    #     [line_set, *line_mesh1_geoms, *line_mesh2_geoms])
     o3d.visualization.draw_geometries(
-        [line_set, *line_mesh1_geoms, *line_mesh2_geoms])
+        [line_set, *line_mesh1_geoms])
 
 
 if __name__ == "__main__":

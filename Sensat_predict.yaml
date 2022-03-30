@@ -4,7 +4,7 @@ MODEL:
   CHANNELS: 5
   SEMANTIC: False
   RESUME: True
-  RESUME_MODEL: "checkpoints/0311_0758_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Dice_channel5_2_3_32_0.0005/model_best_depth.tar"
+  RESUME_MODEL: "checkpoints/0315_1610_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Dice_channel5_2_3_32_0.0005/model_best_depth.tar"
   DEEPLAB:
     LR: 1e-2
     NUM_EPOCHS: 50

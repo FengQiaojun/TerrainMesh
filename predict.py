@@ -160,7 +160,9 @@ if __name__ == "__main__":
     
     score = metrics.get_results()
     print("GT label distribution", np.sum(metrics.confusion_matrix,axis=1)/np.sum(metrics.confusion_matrix))
+    print("GT label distribution", np.sum(metrics.confusion_matrix,axis=1))
     print("Predict label distribution", np.sum(metrics.confusion_matrix,axis=0)/np.sum(metrics.confusion_matrix))
+    print("Predict label distribution", np.sum(metrics.confusion_matrix,axis=0))
     print("Acc",score['Overall Acc'])
     print("Mean Acc",score['Mean Acc'])
     print("MeanIoU",score['Mean IoU'])

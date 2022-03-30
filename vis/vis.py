@@ -5,6 +5,7 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
+import os 
 
 from linemesh import LineMesh
 
@@ -108,40 +109,84 @@ def texture_mesh_by_vertices(mesh, depth_min, depth_max, cmap=cm.terrain):
     return mesh
 
 depth_missing_value = 74.5
-depth_min = 50
-depth_max = 80
+depth_min = 40
+depth_max = 90
 focal_length = 2
 image_size = 512
 depth_scale = 100
-root_folder = "visualizations/journal/"
-init_mesh_path = "visualizations/journal/cambridge_10_0186_init.obj"
-refine_mesh_path = "visualizations/journal/cambridge_10_0186_refine.obj"
-gt_mesh_path = "visualizations/journal/0186_gt_mesh.obj"
-depth_img_path = "visualizations/journal/0186_gt_depth.png"
-refine_depth_img_path = "visualizations/journal/cambridge_10_0186_refine_depth.png"
-sparse_depth_img_path = "visualizations/journal/0186_sparse_depth.png"
-
-sem_2d_img_path = "visualizations/journal/cambridge_10_0186_2D_sem.png"
-sem_refine_img_path = "visualizations/journal/cambridge_10_0186_refine_sem.png"
 
 
-save_pseudo_sparse_depth_img_path = "visualizations/journal/0186_pseudo_sparse_depth.png"
-save_pseudo_depth_img_path = "visualizations/journal/0186_pseudo_gt_depth.png"
-save_refine_depth_img_path = "visualizations/journal/cambridge_10_0186_pseudo_refine_depth.png"
-save_sem_img_path = "visualizations/journal/gt_sem.png"
+seq_idx = "cambridge_11"
+img_idx = "0617"
+
+data_folder = "/mnt/NVMe-2TB/qiaojun/SensatUrban"
+
+sparse_depth_img_path = os.path.join(data_folder,seq_idx,"Pcds_1000",img_idx+".png")
+save_pseudo_sparse_depth_img_path = "visualizations/journal/comp/"+seq_idx+"_"+img_idx+"_pseudo_sparse_depth.png"
+
+init_depth_img_path = os.path.join("visualizations/journal/",seq_idx,seq_idx+"_"+img_idx+"_init_depth.png")
+save_pseudo_init_depth_img_path = "visualizations/journal/comp/"+seq_idx+"_"+img_idx+"_pseudo_init_depth.png"
+
+refine_depth_img_path = os.path.join("visualizations/journal/",seq_idx,seq_idx+"_"+img_idx+"_refine_depth.png")
+save_pseudo_refine_depth_img_path = "visualizations/journal/comp/"+seq_idx+"_"+img_idx+"_pseudo_refine_depth.png"
+
+gt_depth_img_path = os.path.join(data_folder,seq_idx,"Depths",img_idx+".png")
+save_pseudo_gt_depth_img_path = "visualizations/journal/comp/"+seq_idx+"_"+img_idx+"_pseudo_gt_depth.png"
+
+tri_depth_img_path = os.path.join("visualizations/journal/",seq_idx,seq_idx+"_"+img_idx+"_tri_depth.png")
+save_pseudo_tri_depth_img_path = "visualizations/journal/comp/"+seq_idx+"_"+img_idx+"_pseudo_tri_depth.png"
+
+init_mesh_path = os.path.join("visualizations/journal/",seq_idx,seq_idx+"_"+img_idx+"_init.obj")
+save_init_mesh_path = "visualizations/journal/comp/mesh_"+seq_idx+"_"+img_idx+"_init_height.obj"
+refine_mesh_path = os.path.join("visualizations/journal/",seq_idx,seq_idx+"_"+img_idx+"_refine.obj")
+save_refine_mesh_path = "visualizations/journal/comp/mesh_"+seq_idx+"_"+img_idx+"_refine_height.obj"
+mesh_path = os.path.join("visualizations/journal/",seq_idx,seq_idx+"_"+img_idx+"_refine.obj")
+rgb_path = os.path.join(data_folder,seq_idx,"Images",img_idx+".png")
+sem_path = os.path.join("visualizations/journal/",seq_idx,seq_idx+"_"+img_idx+"_refine_sem.png")
+save_rgb_mesh_path = "visualizations/journal/comp/mesh_"+seq_idx+"_"+img_idx+"_refine_rgb.obj"
+save_sem_mesh_path = "visualizations/journal/comp/mesh_"+seq_idx+"_"+img_idx+"_refine_sem.obj"
+
 
 if __name__ == "__main__":
     
+    '''
+    sparse_depth = imread(sparse_depth_img_path)/depth_scale
+    pseudo_sparse_depth = pseudo_color_map_sparse(sparse_depth,depth_min,depth_max,dot_r=4)
+    imwrite(save_pseudo_sparse_depth_img_path,pseudo_sparse_depth)
 
-    mesh = o3d.io.read_triangle_mesh(refine_mesh_path)
+    init_depth = imread(init_depth_img_path)/depth_scale
+    pseudo_init_depth = pseudo_color_map(init_depth,depth_min,depth_max)
+    imwrite(save_pseudo_init_depth_img_path,pseudo_init_depth)
+
+    refine_depth = imread(refine_depth_img_path)/depth_scale
+    pseudo_refine_depth = pseudo_color_map(refine_depth,depth_min,depth_max)
+    imwrite(save_pseudo_refine_depth_img_path,pseudo_refine_depth)
+
+    gt_depth = imread(gt_depth_img_path)/depth_scale
+    pseudo_gt_depth = pseudo_color_map(gt_depth,depth_min,depth_max)
+    imwrite(save_pseudo_gt_depth_img_path,pseudo_gt_depth)
+
+    tri_depth = imread(tri_depth_img_path)/depth_scale
+    pseudo_tri_depth = pseudo_color_map(tri_depth,depth_min,depth_max)
+    imwrite(save_pseudo_tri_depth_img_path,pseudo_tri_depth)
+    '''
+
+    '''
+    mesh = o3d.io.read_triangle_mesh(mesh_path)
+
+    rgb_texture_map = imread(rgb_path)
+    textured_mesh = texture_mesh(rgb_texture_map, mesh, focal_length)
+    o3d.io.write_triangle_mesh(save_rgb_mesh_path,textured_mesh)
+
+    sem_texture_map = imread(sem_path)
+    textured_mesh = texture_mesh(sem_texture_map, mesh, focal_length)
+    o3d.io.write_triangle_mesh(save_sem_mesh_path,textured_mesh)
+    '''
     
-    texture_map = imread(sem_2d_img_path)
-    textured_mesh = texture_mesh(texture_map, mesh, focal_length)
-    o3d.visualization.draw_geometries([textured_mesh],mesh_show_wireframe=True,mesh_show_back_face=True)
-    o3d.io.write_triangle_mesh("visualizations/journal/temp/sem_mesh_0.obj",textured_mesh)
-
-    texture_map = imread(sem_refine_img_path)
-    textured_mesh = texture_mesh(texture_map, mesh, focal_length)
-    o3d.visualization.draw_geometries([textured_mesh],mesh_show_wireframe=True,mesh_show_back_face=True)
-    o3d.io.write_triangle_mesh("visualizations/journal/temp/sem_mesh_1.obj",textured_mesh)
-                
+    mesh = o3d.io.read_triangle_mesh(init_mesh_path)
+    textured_mesh = texture_mesh_by_vertices(mesh,depth_min,depth_max)
+    o3d.io.write_triangle_mesh(save_init_mesh_path,textured_mesh)
+    mesh = o3d.io.read_triangle_mesh(refine_mesh_path)
+    textured_mesh = texture_mesh_by_vertices(mesh,depth_min,depth_max)
+    o3d.io.write_triangle_mesh(save_refine_mesh_path,textured_mesh)
+    

@@ -2,7 +2,7 @@ import numpy as np
 from scipy.spatial import Delaunay
 import open3d as o3d
 import matplotlib.pyplot as plt
-from imageio import imread 
+from imageio import imread, imwrite
 import os 
 from tqdm import tqdm
 
@@ -14,6 +14,9 @@ from pytorch3d.loss import chamfer_distance, mesh_edge_loss, mesh_laplacian_smoo
 from config import get_sensat_cfg
 from dataset.sensat_dataset import load_data_by_index
 from loss import MeshHybridLoss
+
+depth_min = 40
+depth_max = 90
 
 def triangulation_sfm_points(vertices):
     vertices_2D = vertices[:,:2]/np.expand_dims(vertices[:,2],axis=1)
@@ -71,12 +74,14 @@ if __name__ == "__main__":
     loss_depth_sum = 0
 
     for seq_idx in ["birmingham_4","cambridge_10","cambridge_11"]:
+    #for seq_idx in ["cambridge_10"]:
         for img_idx in range(660):
+        #for img_idx in [100]:
             img_idx = "%04d"%img_idx 
             rgb_img, sparse_depth, depth_edt, sem_2d_pred, init_mesh, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, gt_semantic = load_data_by_index(cfg = cfg, seq_idx = seq_idx,img_idx=img_idx,meshing="mesh1024",samples="1000",device=device)
                 
             #sparse_depth = sparse_depth.cpu().numpy()[0,0,::]
-            sparse_depth_path = os.path.join("/mnt/NVMe-2TB/qiaojun/SensatUrban",seq_idx,"Pcds_500",img_idx+".png")
+            sparse_depth_path = os.path.join("/mnt/NVMe-2TB/qiaojun/SensatUrban",seq_idx,"Pcds_1000",img_idx+".png")
             sparse_depth = np.asfarray(imread(sparse_depth_path)/100, dtype=np.float32)
             vertices, faces = triangulation_sfm_512(sparse_depth)
             torch_verts = torch.tensor(vertices,dtype=torch.float32)
@@ -86,6 +91,9 @@ if __name__ == "__main__":
             tri_mesh = load_objs_as_meshes(["temp.obj"], device=device)
             
             loss, losses, img_predict = loss_fn(tri_mesh, None, gt_mesh_pcd, gt_depth, gt_semantic, return_img=True)
+            depth_img = img_predict[0][0,0,::].cpu().numpy()
+            imwrite(os.path.join("visualizations/journal",seq_idx,seq_idx+"_"+img_idx+"_tri_depth.png"),(depth_img*100).astype(np.uint16))
+
             print("loss_chamfer[0]",losses["chamfer_0"])
             print("loss_depth[0]",losses["depth_0"])
             '''

@@ -190,7 +190,7 @@ class MeshHybridLoss(nn.Module):
                 semantic_loss = self.sem_criterion(semantic_predict, gt_semantic)
                 total_loss = total_loss + self.semantic_weight * semantic_loss
                 losses["semantic_%d"%i] = semantic_loss
-
+        
         if return_img:
             img_list = []
             if (gt_depth is not None and self.depth_weight > 0):
