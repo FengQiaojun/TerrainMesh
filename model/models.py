@@ -26,34 +26,7 @@ class VoxMeshHead(nn.Module):
         self.num_vertices = cfg.MODEL.MESH_HEAD.NUM_VERTICES 
         self.num_classes = cfg.MODEL.MESH_HEAD.NUM_CLASSES
 
-<<<<<<< HEAD
-            if cfg.MODEL.BACKBONE == "resnet50":
-                self.sem_model = deeplabv3_resnet50(cfg)
-            elif cfg.MODEL.BACKBONE == "resnet34":
-                self.sem_model = deeplabv3_resnet34(cfg)
-            elif cfg.MODEL.BACKBONE == "resnet18":
-                self.sem_model = deeplabv3_resnet18(cfg)
-            
-            if len(cfg.MODEL.MESH_HEAD.SEM_PRETRAIN_MODEL_PATH) > 0:
-                checkpoint = torch.load(cfg.MODEL.MESH_HEAD.SEM_PRETRAIN_MODEL_PATH)
-                model_param_names = list(checkpoint["model_state_dict"].keys())
-                if "module" in model_param_names[0]:
-                    new_state_dict = OrderedDict()
-                    for k, v in checkpoint["model_state_dict"].items():
-                        name = k.replace("module.", "") # remove `module.`
-                        new_state_dict[name] = v
-                    self.sem_model.load_state_dict(new_state_dict)
-                else:
-                    self.sem_model.load_state_dict(checkpoint["model_state_dict"])
-                if cfg.MODEL.MESH_HEAD.FREEZE_CLASSIFIER:
-                    for param in self.sem_model.classifier.parameters():
-                        param.requires_grad = False 
-            self.backbone, feat_dims = build_backbone(cfg.MODEL.BACKBONE,in_channels=cfg.MODEL.CHANNELS,ref_model=self.sem_model.backbone,pretrained=False)
-        else:
-            self.backbone, feat_dims = build_backbone(cfg.MODEL.BACKBONE,in_channels=cfg.MODEL.CHANNELS,ref_model=None,pretrained=False)
-=======
         self.backbone, feat_dims = build_backbone(cfg.MODEL.BACKBONE,in_channels=cfg.MODEL.CHANNELS,ref_model=None,pretrained=False)
->>>>>>> new_semantic
         
         cfg.MODEL.MESH_HEAD.COMPUTED_INPUT_CHANNELS = sum(feat_dims)
         self.mesh_head = MeshRefinementHead(cfg)
@@ -91,9 +64,3 @@ class VoxMeshHead(nn.Module):
         else:
             return refined_meshes
 
-<<<<<<< HEAD
-        refined_meshes = self.mesh_head(img_feats, init_meshes, P)
-
-        return refined_meshes
-=======
->>>>>>> new_semantic

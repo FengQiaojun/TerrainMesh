@@ -59,10 +59,6 @@ def get_sensat_cfg():
     cfg.MODEL.MESH_HEAD.GRAPH_CONV_DIM_SEMANTIC = False
     cfg.MODEL.MESH_HEAD.GRAPH_CONV_INIT = "normal"
     cfg.MODEL.MESH_HEAD.GRAPH_CONV_SEMANTIC = True
-<<<<<<< HEAD
-    cfg.MODEL.MESH_HEAD.FREEZE_CLASSIFIER = True
-=======
->>>>>>> new_semantic
     # Mesh sampling
     cfg.MODEL.MESH_HEAD.GT_NUM_SAMPLES = 5000
     cfg.MODEL.MESH_HEAD.PRED_NUM_SAMPLES = 5000
@@ -116,11 +112,7 @@ def get_sensat_cfg():
     cfg.SOLVER.SCHEDULER_STEP_SIZE = 50
     cfg.SOLVER.SCHEDULER_GAMMA = 0.5
     cfg.SOLVER.NUM_EPOCHS = 300
-<<<<<<< HEAD
-    cfg.SOLVER.SEM_START_EPOCH = 300
-=======
     cfg.SOLVER.SEM_START_EPOCH = 0
->>>>>>> new_semantic
     cfg.SOLVER.BASE_LR = 0.01
     cfg.SOLVER.OPTIMIZER = "sgd"  # {'sgd', 'adam'}
     cfg.SOLVER.MOMENTUM = 0.9

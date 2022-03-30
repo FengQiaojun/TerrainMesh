@@ -32,14 +32,10 @@ if __name__ == "__main__":
     device = torch.device("cuda:%d" % worker_id)
 
     if cfg.MODEL.RESUME:
-<<<<<<< HEAD
-        save_path = os.path.join(cfg.MODEL.RESUME_MODEL,"..")
-=======
         save_path = generate_model_record_name(cfg,prefix="checkpoints")
         if not os.path.isdir(save_path):
             os.mkdir(save_path)
         shutil.copyfile(cfg_file, os.path.join(save_path,cfg_file))
->>>>>>> new_semantic
         writer = SummaryWriter(save_path)
         checkpoint = torch.load(cfg.MODEL.RESUME_MODEL)
         # Build the model
@@ -97,11 +93,7 @@ if __name__ == "__main__":
     }
     loss_fn = MeshHybridLoss(**loss_fn_kwargs)
     loss_fn.set_semantic_weight(0)
-<<<<<<< HEAD
-
-=======
     
->>>>>>> new_semantic
     # Build the DataLoaders 
     loaders = {}
     loaders["train"] = build_data_loader(cfg, "Sensat", split_name=cfg.DATASETS.TRAINSET, num_workers=cfg.DATASETS.NUM_THREADS, shuffle=cfg.DATASETS.SHUFFLE)
@@ -122,11 +114,6 @@ if __name__ == "__main__":
     starting_epoch = checkpoint["epoch"] if cfg.MODEL.RESUME else 0
     for epoch in range(starting_epoch, cfg.SOLVER.NUM_EPOCHS+1):
     
-<<<<<<< HEAD
-        if epoch == cfg.SOLVER.SEM_START_EPOCH:
-            loss_fn.set_semantic_weight(cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT)
-            print("Switch to semantic mode at epoch ",epoch)
-=======
         if cfg.MODEL.SEMANTIC and epoch == cfg.SOLVER.SEM_START_EPOCH:
             loss_fn.set_semantic_weight(cfg.MODEL.MESH_HEAD.SEMANTIC_LOSS_WEIGHT)
             print("Switch to semantic mode at epoch ",epoch)
@@ -200,7 +187,6 @@ if __name__ == "__main__":
             }, save_path+"/model_latest.tar")
 
 
->>>>>>> new_semantic
 
         # Validation
         if (epoch)%cfg.SOLVER.LOGGING_PERIOD == 0 or epoch == cfg.SOLVER.NUM_EPOCHS:
@@ -237,11 +223,7 @@ if __name__ == "__main__":
                 if cfg.MODEL.MESH_HEAD.DEPTH_LOSS_WEIGHT > 0:
                     for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                         loss_depth_sum[i] += losses["depth_%d"%i].detach().cpu().numpy()*rgb_img.shape[0]
-<<<<<<< HEAD
-                if cfg.MODEL.SEMANTIC and loss_fn.get_semantic_weight() > 0:
-=======
                 if loss_fn.get_semantic_weight() > 0:
->>>>>>> new_semantic
                     for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                         loss_semantic_sum[i] += losses["semantic_%d"%i].detach().cpu().numpy()*rgb_img.shape[0]
                 num_count += rgb_img.shape[0]
@@ -273,82 +255,12 @@ if __name__ == "__main__":
                     min_depth_error = loss_depth_sum[cfg.MODEL.MESH_HEAD.NUM_STAGES-1]/num_count
                     min_depth_epoch = epoch
                     shutil.copyfile(save_path+"/model_%d.tar"%(epoch), save_path+"/model_best_depth.tar")            
-<<<<<<< HEAD
-            if cfg.MODEL.SEMANTIC and loss_fn.get_semantic_weight() > 0:
-=======
             if loss_fn.get_semantic_weight() > 0:
->>>>>>> new_semantic
                 for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
                     writer.add_scalar("Loss/val/epoch/semantic_%d"%i, loss_semantic_sum[i]/num_count, epoch)                     
                 if loss_semantic_sum[cfg.MODEL.MESH_HEAD.NUM_STAGES-1]/num_count < min_semantic_error:
                     min_semantic_error = loss_semantic_sum[cfg.MODEL.MESH_HEAD.NUM_STAGES-1]/num_count
                     min_semantic_epoch = epoch
                     shutil.copyfile(save_path+"/model_%d.tar"%(epoch), save_path+"/model_best_semantic.tar")
-<<<<<<< HEAD
-            print("Best Chamfer Epoch %d, Best Depth Epoch %d, Best Semantic Epoch %d."%(min_chamfer_epoch,min_depth_epoch,min_semantic_epoch))  
-        
-        num_count = 0
-        loss_sum = 0
-        loss_chamfer_sum = [0]*cfg.MODEL.MESH_HEAD.NUM_STAGES
-        loss_depth_sum = [0]*cfg.MODEL.MESH_HEAD.NUM_STAGES
-        loss_semantic_sum = [0]*cfg.MODEL.MESH_HEAD.NUM_STAGES
-        model.train()
-        loop = tqdm(enumerate(loaders["train"]),total=batch_num_train)
-        for i, batch in loop:
-            batch = loaders["train"].postprocess(batch, device)
-            rgb_img, sparse_depth, depth_edt, init_mesh, init_mesh_scale, init_mesh_render_depth, gt_depth, gt_mesh_pcd, gt_semantic = batch 
-            # Concatenate the inputs
-            if cfg.MODEL.CHANNELS == 3:
-                input_img = rgb_img
-            elif cfg.MODEL.CHANNELS == 4:
-                input_img = torch.cat((rgb_img,init_mesh_render_depth),dim=1)
-            elif cfg.MODEL.CHANNELS == 5:
-                input_img = torch.cat((rgb_img,init_mesh_render_depth,depth_edt),dim=1)
-            mesh_pred = model(input_img, init_mesh)
-            # scale the mesh back to calculate loss
-            if cfg.DATASETS.NORMALIZE_MESH:
-                for m_idx, m in enumerate(mesh_pred):
-                    mesh_pred[m_idx] = m.scale_verts(init_mesh_scale)
-
-            loss, losses = loss_fn(mesh_pred, gt_mesh_pcd, gt_depth, gt_semantic)
-            if cfg.MODEL.MESH_HEAD.CHAMFER_LOSS_WEIGHT > 0:
-                for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
-                    writer.add_scalar("Loss/train/batch/chamfer_%d"%i, losses["chamfer_%d"%i], epoch*batch_num_train+i)
-                    loss_chamfer_sum[i] += losses["chamfer_%d"%i].detach().cpu().numpy()*rgb_img.shape[0]
-            if cfg.MODEL.MESH_HEAD.DEPTH_LOSS_WEIGHT > 0:
-                for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
-                    writer.add_scalar("Loss/train/batch/depth_%d"%i, losses["depth_%d"%i], epoch*batch_num_train+i)
-                    loss_depth_sum[i] += losses["depth_%d"%i].detach().cpu().numpy()*rgb_img.shape[0]
-            if cfg.MODEL.SEMANTIC and loss_fn.get_semantic_weight() > 0:
-                for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
-                    writer.add_scalar("Loss/train/batch/semantic_%d"%i, losses["semantic_%d"%i], epoch*batch_num_train+i)
-                    loss_semantic_sum[i] += losses["semantic_%d"%i].detach().cpu().numpy()*rgb_img.shape[0]
-
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            writer.add_scalar("Loss/train/batch", loss, epoch*batch_num_train+i)
-            loss_sum += loss.detach().cpu().numpy()*rgb_img.shape[0]
-            num_count += rgb_img.shape[0]
-            
-        writer.add_scalar("Loss/train/epoch", loss_sum/num_count, epoch)   
-        if cfg.MODEL.MESH_HEAD.CHAMFER_LOSS_WEIGHT > 0:
-            for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
-                writer.add_scalar("Loss/train/epoch/chamfer_%d"%i, loss_chamfer_sum[i]/num_count, epoch)   
-        if cfg.MODEL.MESH_HEAD.DEPTH_LOSS_WEIGHT > 0:
-            for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
-                writer.add_scalar("Loss/train/epoch/depth_%d"%i, loss_depth_sum[i]/num_count, epoch)  
-        if cfg.MODEL.SEMANTIC and loss_fn.get_semantic_weight() > 0:
-            for i in range(cfg.MODEL.MESH_HEAD.NUM_STAGES):
-                writer.add_scalar("Loss/train/epoch/semantic_%d"%i, loss_semantic_sum[i]/num_count, epoch)  
-        
-        torch.save({
-            'epoch': epoch,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'scheduler_state_dict': scheduler.state_dict(),
-            }, save_path+"/model_latest.tar")
-=======
             
             print("Best Chamfer Epoch %d, Best Depth Epoch %d, Best Semantic Epoch %d."%(min_chamfer_epoch,min_depth_epoch,min_semantic_epoch))  
->>>>>>> new_semantic

@@ -125,17 +125,8 @@ class MeshHybridLoss(nn.Module):
     def set_semantic_weight(self, semantic_weight):
         self.semantic_weight = semantic_weight
 
-<<<<<<< HEAD
-    def set_semantic_weight(self, semantic_weight):
-        self.semantic_weight = semantic_weight
-
     def get_semantic_weight(self):
         return self.semantic_weight
-
-=======
-    def get_semantic_weight(self):
-        return self.semantic_weight
->>>>>>> new_semantic
 
     def forward(self, meshes_pred, sem_2d_pred, meshes_gt, gt_depth, gt_semantic, return_img=False):
         
