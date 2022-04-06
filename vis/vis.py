@@ -105,8 +105,16 @@ def texture_mesh_by_vertices(mesh, depth_min, depth_max, cmap=cm.terrain):
     vertex_colors = np.zeros((mesh_v.shape[0],3))
     for i in range(vertex_colors.shape[0]):
         vertex_colors[i,:] = mapper.to_rgba(mesh_v[i,2])[:3]
-    mesh.vertex_colors = o3d.utility.Vector3dVector(vertex_colors)    
+    mesh.vertex_colors = o3d.utility.Vector3dVector(vertex_colors)   
     return mesh
+
+def texture_mesh_vertices(mesh_v, depth_min, depth_max, cmap=cm.terrain):
+    norm = matplotlib.colors.Normalize(vmin=int(depth_min), vmax=int(depth_max), clip=True)
+    mapper = cm.ScalarMappable(norm=norm, cmap=cm.terrain)
+    vertex_colors = np.zeros((mesh_v.shape[0],3))
+    for i in range(vertex_colors.shape[0]):
+        vertex_colors[i,:] = mapper.to_rgba(mesh_v[i,2])[:3]
+    return vertex_colors
 
 depth_missing_value = 74.5
 depth_min = 40

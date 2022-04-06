@@ -11,7 +11,7 @@ from pytorch3d.renderer import (
     RasterizationSettings,
     MeshRasterizer,
 )
-from meshing import regular_512_576, regular_512_1024
+from .meshing import regular_512_576, regular_512_1024, regular_512_2025
 
 # Only keep parts of the outputs of MeshRenderer.
 class MeshRendererWithFragmentsOnly(nn.Module):
@@ -31,7 +31,7 @@ class MeshRendererWithFragmentsOnly(nn.Module):
 # - laplacian
 # - pix_to_face: given the pixel coordinate, return the index of face
 # - bary_coords: given the pixel coordinate, return the barycentric coordinate (but need the face idx to check the vertex indices).
-def init_mesh(sparse_depth_img, vertices, faces, laplacian, pix_to_face, bary_coords):
+def init_mesh(sparse_depth_img, vertices, faces, laplacian, pix_to_face, bary_coords, w_laplacian=0.5):
     sparse_depth_mask = sparse_depth_img>0
     num_sparse_depth = np.sum(sparse_depth_mask)
     num_vertices = vertices.shape[0]
@@ -45,7 +45,7 @@ def init_mesh(sparse_depth_img, vertices, faces, laplacian, pix_to_face, bary_co
         bary_c = bary_coords[d_idx[0],d_idx[1],:]
         A[i,v_idx] = bary_c
         b[i] = sparse_depth_img[d_idx[0],d_idx[1]]
-    A[-num_vertices:,:] = laplacian/num_vertices*num_sparse_depth*3.0
+    A[-num_vertices:,:] = laplacian/num_vertices*num_sparse_depth*w_laplacian
     p, _ = torch.lstsq(torch.tensor(b).unsqueeze(1),torch.tensor(A))
     new_vertices = vertices * p.numpy()[:num_vertices,:]
     return new_vertices
@@ -74,6 +74,29 @@ def init_mesh_barycentric(vertices, faces, image_size, focal_length, device):
     pix_to_face = fragments.pix_to_face[0, ..., 0].detach().cpu().numpy()
     bary_coords = fragments.bary_coords[0, ..., 0,:].detach().cpu().numpy()
     return pix_to_face, bary_coords
+
+# A comprehensive function to initialize the mesh
+def init_mesh_sparse(sparse_depth_img,num_mesh_vertices,w_laplacian=0.5,image_size=512,cam_c=256,cam_f=512,focal_length=-2,device=torch.device("cuda:0")):
+    if num_mesh_vertices not in [576,1024,2025]:
+        print("The number of mesh vertices can only be 576 / 1024 / 2025.")
+        return
+    if num_mesh_vertices == 576:
+        vertices, faces, laplacian = regular_512_576()
+    elif num_mesh_vertices == 1024:
+        vertices, faces, laplacian = regular_512_1024()
+    elif num_mesh_vertices == 2025:
+        vertices, faces, laplacian = regular_512_2025()
+
+    vertices = (vertices-cam_c)/cam_f
+    vertices = np.hstack(
+        (vertices, np.ones((vertices.shape[0], 1))))
+    pix_to_face, bary_coords = init_mesh_barycentric(
+        vertices, faces, image_size, focal_length, device)
+
+    mesh_vertices = init_mesh(sparse_depth_img, vertices, faces, laplacian, pix_to_face, bary_coords, w_laplacian)
+    mesh_faces = faces
+    return mesh_vertices, mesh_faces
+
 
 if __name__ == "__main__":
 
