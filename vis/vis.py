@@ -7,7 +7,7 @@ import numpy as np
 import open3d as o3d
 import os 
 
-from linemesh import LineMesh
+from .linemesh import LineMesh
 
 # Convert a scalar map to a pseudo-color map
 # inputs:

@@ -76,11 +76,6 @@ class SensatDataset(Dataset):
 
                     if size is not None and len(self.rgb_img_ids) == size:
                         return 
-# Temporary testing            
-#                if len(self.rgb_img_ids) == 660:
-#                    break
-#            break    
-# Temporary testing 
 
     def __len__(self):
         return len(self.rgb_img_ids)
@@ -212,11 +207,6 @@ class SensatSemanticDataset(Dataset):
                         data_dir, seq, "Pcds_"+str(sam), target_idx+"_"+meshing+".png"))
                     self.sem_img_ids.append(os.path.join(
                         data_dir, seq, "Semantics_5", target))
-# Temporary testing            
-#                if len(self.rgb_img_ids) == 660:
-#                    break
-#            break    
-# Temporary testing 
 
     def __len__(self):
         return len(self.rgb_img_ids)
@@ -310,7 +300,6 @@ def load_data_by_index(cfg,
     gt_depth = torch.unsqueeze(gt_depth, dim=0)
     gt_mesh_pcd = torch.unsqueeze(gt_mesh_pcd, dim=0)
     sem_img = torch.unsqueeze(sem_img, dim=0)
-
 
     rgb_img = rgb_img.to(device)
     sparse_depth = sparse_depth.to(device)

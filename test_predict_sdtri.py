@@ -94,32 +94,7 @@ if __name__ == "__main__":
             depth_img = img_predict[0][0,0,::].cpu().numpy()
             imwrite(os.path.join("visualizations/journal",seq_idx,seq_idx+"_"+img_idx+"_tri_depth.png"),(depth_img*100).astype(np.uint16))
 
-            print("loss_chamfer[0]",losses["chamfer_0"])
-            print("loss_depth[0]",losses["depth_0"])
-            '''
-            # Perform some smoothing
-            verts, faces = tri_mesh.get_mesh_verts_faces(0)
-            deform_verts = torch.full(
-                            tri_mesh.verts_packed().shape, 0.0, device=device, requires_grad=True)
-            optimizer = torch.optim.Adam([deform_verts], lr=lr)
-            loop = tqdm(range(iters), disable=False)
-            for i in loop:
-                # Initialize optimizer
-                optimizer.zero_grad()
-                # Deform the mesh
-                new_mesh = Meshes(
-                    verts=[verts.to(device)+deform_verts],   
-                    faces=[faces.to(device)], 
-                )
-                loss = 0.5*mesh_laplacian_smoothing(new_mesh) + 0.01*mesh_edge_loss(new_mesh)
-                loss.backward(retain_graph=True)
-                optimizer.step()
-            tri_mesh = new_mesh
-
-            loss, losses, img_predict = loss_fn(tri_mesh, None, gt_mesh_pcd, gt_depth, gt_semantic, return_img=True)
-            print("loss_chamfer[0]",losses["chamfer_0"])
-            print("loss_depth[0]",losses["depth_0"])
-            '''
+            
             if cfg.MODEL.MESH_HEAD.CHAMFER_LOSS_WEIGHT > 0:
                 loss_chamfer_sum += losses["chamfer_0"].detach().cpu().numpy()
             if cfg.MODEL.MESH_HEAD.DEPTH_LOSS_WEIGHT > 0:
@@ -128,8 +103,7 @@ if __name__ == "__main__":
             num_count += 1
             
 
-    print(num_count)
-
+    
     if cfg.MODEL.MESH_HEAD.CHAMFER_LOSS_WEIGHT > 0:
         print("loss_chamfer_sum", loss_chamfer_sum/num_count)
     if cfg.MODEL.MESH_HEAD.DEPTH_LOSS_WEIGHT > 0:

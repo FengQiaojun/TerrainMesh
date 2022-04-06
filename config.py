@@ -15,10 +15,6 @@ def get_sensat_cfg():
     cfg.MODEL.BACKBONE = "resnet50"
     cfg.MODEL.CHANNELS = 3
     cfg.MODEL.SEMANTIC = False
-
-    # ------------------------------------------------------------------------ #
-    # Checkpoint
-    # ------------------------------------------------------------------------ #
     cfg.MODEL.RESUME = False
     cfg.MODEL.RESUME_MODEL = ""
 

@@ -17,7 +17,6 @@ from dataset.build_data_loader import build_data_loader
 from dataset.sensat_dataset import load_data_by_index
 from loss import MeshHybridLoss
 from mesh_init.mesh_renderer import render_mesh_texture
-from mesh_sem_opt import mesh_sem_opt_visualize, mesh_sem_opt_
 from model.models import VoxMeshHead
 from utils.optimizer import build_optimizer
 from utils.model_record_name import generate_model_record_name
