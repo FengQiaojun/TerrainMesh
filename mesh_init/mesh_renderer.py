@@ -48,6 +48,7 @@ class TextureShader(nn.Module):
         images = torch.squeeze(colors,dim=3)
         return images
 
+
 def render_mesh_texture(mesh,image_size=512,focal_length=-1,device=None):
     R = torch.eye(3,device=device).reshape((1,3,3))
     T = torch.zeros(1,3,device=device)
@@ -67,8 +68,13 @@ def render_mesh_texture(mesh,image_size=512,focal_length=-1,device=None):
     renderer = MeshRendererWithFragments(
         rasterizer=rasterizer, shader=shader
     )
-    images, depth = renderer(mesh)
-    return images.permute(0,3,1,2), depth
+    images, fragments = renderer(mesh)
+    images = images.permute(0,3,1,2).detach().max(dim=1)[1].cpu().numpy()[0,::]
+    depth = fragments.zbuf
+    depth = depth[0, ..., 0].detach().cpu().numpy()
+    #depth_mean = np.mean(depth[np.where(depth>0)])
+    #depth[np.where(depth<=0)] = depth_mean
+    return images, depth
 
 def render_mesh_vertex_texture(verts,faces,feats,image_size=512,focal_length=-1,device=None):
     textures = TexturesVertex(verts_features=feats.to(device))
@@ -104,7 +110,7 @@ class MeshRendererWithDepth(nn.Module):
         fragments = self.rasterizer(meshes_world, **kwargs)
         return fragments.zbuf
 
-def mesh_render_depth(mesh,image_size=512,focal_length=-10,GPU_id="0"):
+def mesh_render_depth(mesh,image_size=512,focal_length=-2,GPU_id="0"):
     device = torch.device("cuda:"+GPU_id)
     # Define the camera
     R = torch.eye(3,device=device).reshape((1,3,3))
@@ -115,6 +121,7 @@ def mesh_render_depth(mesh,image_size=512,focal_length=-10,GPU_id="0"):
         image_size=image_size, 
         blur_radius=0.0001, 
         faces_per_pixel=1, 
+        perspective_correct=False, # this seems solve the nan error
     )
     # Define the renderer
     renderer = MeshRendererWithDepth(
@@ -129,6 +136,7 @@ def mesh_render_depth(mesh,image_size=512,focal_length=-10,GPU_id="0"):
     depth_mean = np.mean(depth[np.where(depth>0)])
     depth[np.where(depth<=0)] = depth_mean
     return depth
+
 
 def pcd_from_depth(depth_img, cam_c, cam_f, to_pytorch3d=False):
     intrinsic = o3d.camera.PinholeCameraIntrinsic(width=depth_img.shape[1], height=depth_img.shape[0], fx=cam_f, fy=cam_f, cx=cam_c, cy=cam_c)
