@@ -1,4 +1,8 @@
 
+## TerrainMesh: Metric-Semantic Terrain Reconstruction from Aerial Images Using Joint 2D-3D Learning}
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1sRMjztDcZaKHfvkV3A2YurW9F4sojoel?usp=sharing)
+
 ### TODO
 
 ### Existing models:
@@ -70,5 +74,3 @@ fvcore
 imageio  
 matplotlib
 
-
-wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1Zj4DgLTgv2tEzjmioF381jSMUHebogrq' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1Zj4DgLTgv2tEzjmioF381jSMUHebogrq" -O checkpoints.zip && rm -rf /tmp/cookies.txt
