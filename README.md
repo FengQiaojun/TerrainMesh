@@ -1,76 +1,30 @@
 
-## TerrainMesh: Metric-Semantic Terrain Reconstruction from Aerial Images Using Joint 2D-3D Learning
+# TerrainMesh: Metric-Semantic Terrain Reconstruction from Aerial Images Using Joint 2D-3D Learning
 
+Check this demo on Colab!  
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1sRMjztDcZaKHfvkV3A2YurW9F4sojoel?usp=sharing)
 
-### TODO
+### Install the dependencies
+We use Conda to manage the packages. The exact package we use are provided. You can create a conda environment by
+```
+$ conda create --name <env> --file terrainmesh.txt
+$ conda activate <env>
+```
 
-### Existing models:
-
-Geo:  
-0309_1635_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_2_3_32_0.0005  
-Geo w/o init:  
-0310_0958_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel5_2_3_32_0.0005  
-Geo w/o norm:  
-0310_0959_resnet18_train_mesh1024_depth[1000]_2D_3D_channel5_2_3_32_0.0005  
-Geo RGB+RD:  
-0311_1848_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel4_2_3_32_0.0005  
-Geo RGB:  
-0311_1849_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel3_2_3_32_0.0005  
-Geo RD+EDT:  
-0311_2212_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_channel2_2_3_32_0.0005
-Geo Mesh 576:  
-0312_1051_resnet18_train_mesh576_depth[1000]_dnorm_2D_3D_channel5_2_3_32_0.0005  
-Geo Mesh 2025:  
-0312_2121_resnet18_train_mesh2025_depth[1000]_dnorm_2D_3D_channel5_2_3_32_0.0005  
-
-Entropy Hybrid:  
-0311_1817_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_CrossEntropy_channel5_2_3_32_0.0005
-Focal Hybrid:  
-0311_0756_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Focal_channel5_2_3_32_0.0005  
-Jaccard Hybrid:  
-0310_1531_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Jaccard_channel5_2_3_32_0.0005  
-Dice Hybrid:  
-0311_0758_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Dice_channel5_2_3_32_0.0005  
-Dice no residual:  
-0315_1610_resnet18_train_mesh1024_depth[1000]_dnorm_2D_3D_Semantic_Dice_channel5_2_3_32_0.0005
+### Run the demo
+A simple demo is provided in [demo.ipynb](demo.ipynb), which might need a local GPU.  
+Another option is to try the [Google Colab demo](https://colab.research.google.com/drive/1sRMjztDcZaKHfvkV3A2YurW9F4sojoel?usp=sharing), which runs on Google's GPU.
 
 
 
-
-**train.py**  
-The main training function.  
-
-**loss.py**  
-Define the loss functions we use. Include the 2D/3D for geometric reconstruction and cross entropy for semantic segmentation.  
-
-**config.py**  
-Some configuration parameters. All important adjustable parameters should also be included in Sensat_basic.yaml.  
-
-**dataset**  
-To build the dataloader.
-
-**mesh_init**  
-Include functions that initialize a 3D mesh from a flat mesh using sparse or dense depth map. One use linear solver when the depth measurements are limited. The other use PyTorch3D differentiable renderer to back-propagate the error on 2D depth image.  
-
-**model**  
-TODO: try the Deeplab version image backbone and classification module.  
-The neural network model. 
-
-**segmentation**  
-Ref: https://github.com/VainF/DeepLabV3Plus-Pytorch  
-
-
-**utils**  
-Some utility functions.
-
-
-conda list --explicit > terrainmesh.txt
-### Dependencies
-pytorch  
-pytorch3d  
-open3d  
-fvcore  
-imageio  
-matplotlib
-
+### Reference 
+```bibtex
+@INPROCEEDINGS{Feng2021Mesh,
+  author={Feng, Qiaojun and Atanasov, Nikolay},
+  booktitle={2021 IEEE International Conference on Robotics and Automation (ICRA)}, 
+  title={Mesh Reconstruction from Aerial Images for Outdoor Terrain Mapping Using Joint 2D-3D Learning}, 
+  year={2021},
+  pages={5208-5214},
+  doi={10.1109/ICRA48506.2021.9561337}}
+```
+If you use our dataset

@@ -40,7 +40,7 @@ MODEL:
     SEMANTIC_RESIDUAL: False
 DATASETS:
   NAME: "Sensat"
-  DATA_DIR: "/mnt/NVMe-2TB/qiaojun/SensatUrban/"
+  DATA_DIR: "/media/qiaojun/ssd/SensatUrban/"
   TRAINSET: "train"
   VALSET: "val"
   TESTSET: "test"
