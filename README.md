@@ -19,6 +19,15 @@ Another option is to try the [Google Colab demo](https://colab.research.google.c
 
 ### Reference 
 ```bibtex
+@misc{Feng2022TerrainMesh,
+  author = {Feng, Qiaojun and Atanasov, Nikolay},
+  title = {TerrainMesh: Metric-Semantic Terrain Reconstruction from Aerial Images Using Joint 2D-3D Learning},
+  publisher = {arXiv},
+  year = {2022},
+  copyright = {arXiv.org perpetual, non-exclusive license}
+}
+```
+```bibtex
 @INPROCEEDINGS{Feng2021Mesh,
   author={Feng, Qiaojun and Atanasov, Nikolay},
   booktitle={2021 IEEE International Conference on Robotics and Automation (ICRA)}, 
