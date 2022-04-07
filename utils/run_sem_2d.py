@@ -13,7 +13,7 @@ from config import get_sensat_cfg
 from model.deeplab import deeplabv3_resnet18, deeplabv3_resnet34, deeplabv3_resnet50
 
 num_imgs = 660
-cfg_file = "Sensat_deeplab.yaml"
+cfg_file = "Sensat_basic.yaml"
 save_model_path = "checkpoints_others/deeplab/0208_2052_deeplab_resnet50_train_mesh1024_depth[1000]_channel3_cross_entropy_50_0.01/model_best_semantic.tar"
 
 if torch.cuda.is_available():

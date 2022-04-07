@@ -10,7 +10,7 @@ MODEL:
     NUM_EPOCHS: 50
     CLASS_WEIGHTED: True
     CLASS_WEIGHT: [0,1,2,3,3]
-    LOSS: "focal_loss"
+    LOSS: "cross_entropy"
     PRETRAIN: True
   MESH_HEAD:
     NAME: "VoxMeshHead"

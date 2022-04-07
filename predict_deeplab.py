@@ -18,7 +18,7 @@ from utils.model_record_name import generate_segmodel_record_name
 from utils.semantic_labels import convert_class_to_rgb_sensat_simplified
 from utils.stream_metrics import StreamSegMetrics
 
-cfg_file = "Sensat_deeplab.yaml"
+cfg_file = "Sensat_basic.yaml"
 
 if __name__ == "__main__":
     # Load the config and create a folder to save the outputs.
@@ -106,14 +106,11 @@ if __name__ == "__main__":
             loss = loss_fn(pred_semantic, gt_semantic)
             loss_sum += loss.detach().cpu().numpy()*rgb_img.shape[0]
             num_count += rgb_img.shape[0]
-
-            #print(pred_semantic[0,:,200,200])
-            #print(gt_semantic[0,200,200])
-                        
+       
             preds = pred_semantic.detach().max(dim=1)[1].cpu().numpy()
             metrics.update(preds, gt_semantic.cpu().numpy())
             
-            
+            '''
             for j in range(rgb_img.shape[0]):
                 plt.subplot(131)
                 plt.imshow(input_img.permute(0,2,3,1).cpu().numpy()[j,::])
@@ -122,7 +119,7 @@ if __name__ == "__main__":
                 plt.subplot(133)
                 plt.imshow(convert_class_to_rgb_sensat_simplified(gt_semantic.cpu().numpy()[j,::]))
                 plt.show()
-            
+            '''
  
         score = metrics.get_results()
         print("Acc",score['Overall Acc'])
