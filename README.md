@@ -36,4 +36,28 @@ Another option is to try the [Google Colab demo](https://colab.research.google.c
   pages={5208-5214},
   doi={10.1109/ICRA48506.2021.9561337}}
 ```
-If you use our dataset
+If you use the [datasets](https://github.com/FengQiaojun/TerrainMesh_Data) in the paper, consider citing  
+[WHU MVS/Stereo Dataset](http://gpcv.whu.edu.cn/data/WHU_MVS_Stereo_dataset.html)
+```bibtex
+@INPROCEEDINGS{Liu2020WHU,
+  author={Liu, Jin and Ji, Shunping},
+  booktitle={2020 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}, 
+  title={A Novel Recurrent Encoder-Decoder Structure for Large-Scale Multi-View Stereo Reconstruction From an Open Aerial Dataset}, 
+  year={2020},
+  pages={6049-6058},
+  doi={10.1109/CVPR42600.2020.00609}}
+```
+[SensatUrban Dataset](http://point-cloud-analysis.cs.ox.ac.uk/)
+```bibtex
+@article{Hu2021Sensat,
+	doi = {10.1007/s11263-021-01554-9},
+	year = 2022,
+	month = {Jan},
+	volume = {130},
+	number = {2},
+	pages = {316--343},
+	author = {Qingyong Hu and Bo Yang and Sheikh Khalid and Wen Xiao and Niki Trigoni and Andrew Markham},
+	title = {{{SensatUrban}: Learning Semantics from Urban-Scale Photogrammetric Point Clouds}},
+	journal = {International Journal of Computer Vision}
+}
+```
