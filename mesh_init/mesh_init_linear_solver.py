@@ -50,6 +50,25 @@ def init_mesh(sparse_depth_img, vertices, faces, laplacian, pix_to_face, bary_co
     new_vertices = vertices * p.numpy()[:num_vertices,:]
     return new_vertices
 
+def init_mesh_inverse(sparse_depth_img, vertices, faces, laplacian, pix_to_face, bary_coords, w_laplacian=0.5):
+    sparse_depth_mask = sparse_depth_img>0
+    num_sparse_depth = np.sum(sparse_depth_mask)
+    num_vertices = vertices.shape[0]
+    A = np.zeros((num_sparse_depth+num_vertices,num_vertices))
+    b = np.zeros(num_sparse_depth+num_vertices)
+    sparse_depth_idx = np.where(sparse_depth_mask==1)
+    for i in range(num_sparse_depth):
+        d_idx = [sparse_depth_idx[0][i],sparse_depth_idx[1][i]]
+        face_idx = pix_to_face[d_idx[0],d_idx[1]]
+        v_idx = faces[face_idx]
+        bary_c = bary_coords[d_idx[0],d_idx[1],:]
+        A[i,v_idx] = bary_c
+        b[i] = 1/sparse_depth_img[d_idx[0],d_idx[1]]
+    A[-num_vertices:,:] = laplacian/num_vertices*num_sparse_depth*w_laplacian
+    p, _ = torch.lstsq(torch.tensor(b).unsqueeze(1),torch.tensor(A))
+    new_vertices = vertices / p.numpy()[:num_vertices,:]
+    return new_vertices
+
 # This function generate the pix_to_face, bary_coords for a fixed mesh. For efficiency, we only run this once and keep this.
 # - pix_to_face: given the pixel coordinate, return the index of face
 # - bary_coords: given the pixel coordinate, return the barycentric coordinate (but need the face idx to check the vertex indices).
@@ -93,7 +112,8 @@ def init_mesh_sparse(sparse_depth_img,num_mesh_vertices,w_laplacian=0.5,image_si
     pix_to_face, bary_coords = init_mesh_barycentric(
         vertices, faces, image_size, focal_length, device)
 
-    mesh_vertices = init_mesh(sparse_depth_img, vertices, faces, laplacian, pix_to_face, bary_coords, w_laplacian)
+    #mesh_vertices = init_mesh(sparse_depth_img, vertices, faces, laplacian, pix_to_face, bary_coords, w_laplacian)
+    mesh_vertices = init_mesh_inverse(sparse_depth_img, vertices, faces, laplacian, pix_to_face, bary_coords, w_laplacian)
     mesh_faces = faces
     return mesh_vertices, mesh_faces
 
