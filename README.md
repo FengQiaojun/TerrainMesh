@@ -7,8 +7,8 @@ Check this demo on Colab!
 ### Install the dependencies
 We use Conda to manage the packages. The exact package we use are provided. You can create a conda environment by
 ```
-$ conda create --name <env> --file terrainmesh.txt
-$ conda activate <env>
+$ conda env create --file terrainmesh.yml
+$ conda activate terrainmesh
 ```
 
 ### Run the demo

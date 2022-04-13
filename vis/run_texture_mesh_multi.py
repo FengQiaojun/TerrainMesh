@@ -27,8 +27,8 @@ depth_scale = 100
 mean_depth = 70
 
 seq_name = "cambridge_10"
-kf_list = "/mnt/NVMe-2TB/qiaojun/SensatUrban/"+seq_name+"/kf_"+seq_name+"_scaled.txt"
-input_folder = "/mnt/NVMe-2TB/qiaojun/journal_terrain/visualizations/journal/"+seq_name
+kf_list = "/media/qiaojun/ssd/SensatUrban/"+seq_name+"/kf_"+seq_name+"_scaled.txt"
+input_folder = "/media/qiaojun/erl/project/Feng_TRO22/journal_terrain/visualizations/journal/"+seq_name
 sample_per_frame = 4
 boundary_removal = 0.00
 cam_frame_list = []
