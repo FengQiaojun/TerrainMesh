@@ -15,6 +15,8 @@ $ conda activate terrainmesh
 A simple demo is provided in [demo.ipynb](demo.ipynb), which might need a local GPU.  
 Another option is to try the [Google Colab demo](https://colab.research.google.com/drive/1sRMjztDcZaKHfvkV3A2YurW9F4sojoel?usp=sharing), which runs on Google's GPU.
 
+### Dataset 
+Check this [TerrainMesh_Data repo](https://github.com/FengQiaojun/TerrainMesh_Data).
 
 
 ### Reference 
