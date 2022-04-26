@@ -24,11 +24,12 @@ Check this [TerrainMesh_Data repo](https://github.com/FengQiaojun/TerrainMesh_Da
 ### Reference 
 ```bibtex
 @misc{Feng2022TerrainMesh,
-  author = {Feng, Qiaojun and Atanasov, Nikolay},
-  title = {TerrainMesh: Metric-Semantic Terrain Reconstruction from Aerial Images Using Joint 2D-3D Learning},
-  publisher = {arXiv},
-  year = {2022},
-  copyright = {arXiv.org perpetual, non-exclusive license}
+      title={TerrainMesh: Metric-Semantic Terrain Reconstruction from Aerial Images Using Joint 2D-3D Learning}, 
+      author={Qiaojun Feng and Nikolay Atanasov},
+      year={2022},
+      eprint={2204.10993},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
 }
 ```
 ```bibtex
