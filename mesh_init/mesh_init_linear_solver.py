@@ -109,12 +109,17 @@ def init_mesh_sparse(sparse_depth_img,num_mesh_vertices,w_laplacian=0.5,image_si
     vertices = (vertices-cam_c)/cam_f
     vertices = np.hstack(
         (vertices, np.ones((vertices.shape[0], 1))))
+    start_time = time.time()    
     pix_to_face, bary_coords = init_mesh_barycentric(
         vertices, faces, image_size, focal_length, device)
-
+    end_time = time.time()
+    print("Mesh Initialization (Barycentric) Time: ", end_time-start_time)
+    start_time = time.time()    
     #mesh_vertices = init_mesh(sparse_depth_img, vertices, faces, laplacian, pix_to_face, bary_coords, w_laplacian)
     mesh_vertices = init_mesh_inverse(sparse_depth_img, vertices, faces, laplacian, pix_to_face, bary_coords, w_laplacian)
     mesh_faces = faces
+    end_time = time.time()
+    print("Mesh Initialization (Linear Solution) Time: ", end_time-start_time)
     return mesh_vertices, mesh_faces
 
 
