@@ -20,6 +20,8 @@ Another option is to try the [Google Colab demo](https://colab.research.google.c
 ### Dataset 
 Check this [TerrainMesh_Data repo](https://github.com/FengQiaojun/TerrainMesh_Data).
 
+### Pretrained Models
+Check this [Google Drive folder](https://drive.google.com/drive/folders/1NyKiWr5dU_9PwKt_SYZjoiJ3eVhjWsN0?usp=share_link). Download and change the associated model paths.
 
 ### Reference 
 ```bibtex
