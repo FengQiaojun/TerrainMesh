@@ -4,7 +4,7 @@
 [Project Page](https://acsweb.ucsd.edu/~qif007/TerrainMesh/index.html)
 
 Check this demo on Colab!  
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1sRMjztDcZaKHfvkV3A2YurW9F4sojoel?usp=sharing)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/13I__SGSzRkxiu4tYgubpeRELr3RhATng?usp=sharing)
 
 ### Install the dependencies
 We use Conda to manage the packages. The exact package we use are provided. You can create a conda environment by
@@ -15,7 +15,7 @@ $ conda activate terrainmesh
 
 ### Run the demo
 A simple demo is provided in [demo.ipynb](demo.ipynb), which might need a local GPU.  
-Another option is to try the [Google Colab demo](https://colab.research.google.com/drive/1sRMjztDcZaKHfvkV3A2YurW9F4sojoel?usp=sharing), which runs on Google's GPU.
+Another option is to try the [Google Colab demo](https://colab.research.google.com/drive/13I__SGSzRkxiu4tYgubpeRELr3RhATng?usp=sharing), which runs on Google's GPU.
 
 ### Dataset 
 Check this [TerrainMesh_Data repo](https://github.com/FengQiaojun/TerrainMesh_Data).
